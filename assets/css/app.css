@@ -109,6 +109,7 @@ body{margin:0;font-family:'PingFang SC','Noto Sans SC','HarmonyOS Sans SC',Robot
 .rt-list li{padding-left:18px;position:relative;margin-bottom:7px;font-size:13px;line-height:1.55}
 .rt-list li::before{content:'';position:absolute;left:0;top:7px;width:7px;height:7px;border-radius:50%;background:var(--blue)}
 /* ===== V1.5 新增样式 ===== */
+.ai-center.act{box-shadow:0 12px 30px rgba(58,123,213,.8),0 0 0 9px rgba(120,168,240,.5)!important;background:linear-gradient(135deg,#8FB6EE,#4A90D9)}
 .scene-pill.act{background:linear-gradient(135deg,#5B8DEF,#3A7BD5);color:#fff;border-color:transparent}
 .scene-pill.act span{color:#fff}
 #micBtn{width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(74,144,217,.1);color:var(--blue-d);transition:all .25s}

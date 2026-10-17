@@ -4,8 +4,6 @@ function renderMe(){
     ['我的宠物','i-paw','#E8945A','go(\'profile\')'],
     ['我的订单','i-cart','#5B8DEF','go(\'orders\')'],
     ['我的收藏','i-star','#E8A23A','openFavs()'],
-    ['活动组局','i-cal','#F05B5B','go(\'act\')'],
-    ['玩偶定制','i-gift','#E8709A','openDoll()'],
     ['积分中心','i-coin','#D9A03C','go(\'points\')'],
     ['帮助与反馈','i-msg','#4CA876','openHelp()'],
     ['设置','i-set','#8A99AB','go(\'settings\')']
@@ -64,7 +62,7 @@ function openHelp(){
 }
 
 /* ============ 宠物档案（M2） ============ */
-let profTab='health',recType='vaccine';
+let profTab='album',recType='vaccine',healthTab='growth';
 const RTYPES=[
   {id:'vaccine',n:'疫苗',i:'i-shield',c:'#4CA876'},
   {id:'deworm',n:'驱虫',i:'i-drop',c:'#3AB5C0'},
@@ -74,22 +72,29 @@ const RTYPES=[
 ];
 function renderProfile(){
   const p=curPet();
-  const tabs=[['health','健康记录'],['album','成长相册'],['remind','提醒'],['family','共享'],['monitor','监控']];
+  const recCnt=S.records.filter(r=>r.pet===p.id).length;
+  const tabs=[['album','成长相册'],['remind','提醒'],['family','共享'],['monitor','监控']];
   $('profile-body').innerHTML=
   '<div class="subhdr"><svg class="icon" style="cursor:pointer" onclick="go(\'me\')"><use href="#i-back"/></svg><b style="font-size:15px">宠物档案</b><span style="margin-left:auto;cursor:pointer" onclick="window._editPet=\''+p.id+'\';go(\'petedit\')"><svg class="icon"><use href="#i-edit"/></svg></span></div>'+
-  '<div class="card" style="margin:12px 16px 14px;padding:16px;display:flex;gap:13px;align-items:center"><div style="width:74px;height:74px;border-radius:24px;overflow:hidden;flex:none">'+petImgTag(p)+'</div><div style="flex:1"><div style="font-size:18px;font-weight:900">'+p.name+' <span class="chip" style="font-size:9.5px">'+p.gender+'</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.6">'+p.species+' · '+p.breed+' · '+petAge(p)+' · '+p.weight+'kg<br>绝育：'+p.neuter+' · 过敏/忌口：'+(p.note||'无')+'</div>'+((p.personality&&p.personality.length)?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">'+p.personality.map(x=>'<span class="chip" style="font-size:9px;padding:2px 8px">性格·'+x+'</span>').join('')+'</div>':'')+(p.important?'<div style="font-size:10.5px;color:#C77E12;margin-top:5px;display:flex;align-items:center;gap:4px;font-weight:600"><svg class="icon icon-s"><use href="#i-alert"/></svg>重要提示：'+esc(p.important)+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm btn-ghost" style="flex:1" onclick="openAvatarWizard()">'+(p.fur||p.acc?'重做虚拟形象':'生成虚拟形象')+'</button><button class="btn btn-sm btn-ghost" style="flex:1;color:#F05B5B;border-color:rgba(240,91,91,.3)" onclick="delPet()">删除档案</button></div></div></div>'+
+  '<div class="card" style="margin:12px 16px 12px;padding:16px;display:flex;gap:13px;align-items:center"><div style="width:74px;height:74px;border-radius:24px;overflow:hidden;flex:none">'+petImgTag(p)+'</div><div style="flex:1"><div style="font-size:18px;font-weight:900">'+p.name+' <span class="chip" style="font-size:9.5px">'+p.gender+'</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.6">'+p.species+' · '+p.breed+' · '+petAge(p)+' · '+p.weight+'kg<br>绝育：'+p.neuter+' · 过敏/忌口：'+(p.note||'无')+'</div>'+((p.personality&&p.personality.length)?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">'+p.personality.map(x=>'<span class="chip" style="font-size:9px;padding:2px 8px">性格·'+x+'</span>').join('')+'</div>':'')+(p.important?'<div style="font-size:10.5px;color:#C77E12;margin-top:5px;display:flex;align-items:center;gap:4px;font-weight:600"><svg class="icon icon-s"><use href="#i-alert"/></svg>重要提示：'+esc(p.important)+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm btn-ghost" style="flex:1" onclick="openAvatarWizard()">'+(p.fur||p.acc?'重做虚拟形象':'生成虚拟形象')+'</button><button class="btn btn-sm btn-ghost" style="flex:1;color:#F05B5B;border-color:rgba(240,91,91,.3)" onclick="delPet()">删除档案</button></div></div></div>'+
+  /* V1.7.4 健康记录迁移入口条：由档案页迁至「成长记录」页 */
+  '<div class="card chov" style="margin:0 16px 12px;padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;background:linear-gradient(135deg,rgba(76,168,118,.09),rgba(59,183,134,.04))" onclick="healthTab=\'rec\';go(\'health\')"><div style="width:36px;height:36px;border-radius:12px;background:rgba(76,168,118,.14);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:#3A9C6B"><use href="#i-med"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700">健康记录 · '+recCnt+' 条 <span class="chip" style="font-size:9px;background:rgba(76,168,118,.14);color:#2E9C6B;padding:1px 7px">已迁移</span></div><div style="font-size:10px;color:var(--sub);margin-top:1px">V1.7.4 起统一在「成长记录」页管理疫苗/驱虫/洗护/就医/饮食</div></div><svg class="icon icon-s" style="color:#C9D2DD;flex:none"><use href="#i-right"/></svg></div>'+
   '<div style="display:flex;gap:7px;padding:0 16px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none">'+tabs.map(t=>'<button class="rTab'+(profTab===t[0]?' act':'')+'" onclick="profTab=\''+t[0]+'\';renderProfile()">'+t[1]+'</button>').join('')+'</div>'+
   '<div id="profBody" style="padding:0 16px">'+profBody(p)+'</div>';
 }
 function profBody(p){
-  if(profTab==='health'){
-    const recs=S.records.filter(r=>r.pet===p.id&&r.type===recType).sort((a,b)=>b.date.localeCompare(a.date));
-    return '<div style="display:flex;gap:7px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none">'+RTYPES.map(t=>'<button class="rTab'+(recType===t.id?' act':'')+'" style="'+(recType===t.id?'':'background:rgba(255,255,255,.5)')+'" onclick="recType=\''+t.id+'\';renderProfile()">'+t.n+'</button>').join('')+'</div>'+
-    (recs.length?recs.map(r=>recCard(r)).join(''):'<div class="card" style="padding:26px;text-align:center;font-size:12px;color:var(--sub)">暂无'+RTYPES.find(t=>t.id===recType).n+'记录</div>')+
-    '<button class="btn" style="margin-top:12px" onclick="openRecForm()"><svg class="icon icon-s" style="vertical-align:-3px"><use href="#i-plus"/></svg> 添加'+RTYPES.find(t=>t.id===recType).n+'记录</button>';
-  }
+  /* V1.7.4 成长相册：月份时间线 + 统计 + 大图预览（原健康记录模块已迁出至成长记录页） */
   if(profTab==='album'){
-    return '<div style="font-size:11px;color:var(--sub);margin-bottom:10px">上传失败自动重试1次，失败条目角标红色感叹号· 上传前压缩至1920px · 更新日常使人宠世界成长值+5</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+petAlbum(p).map(im=>'<div style="height:100px;border-radius:13px;overflow:hidden;position:relative"><img src="'+im+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)"></div>').join('')+'</div><button class="btn btn-ghost" onclick="uploadAlbumPhoto()">+ 上传照片</button>';
+    const OCT=petAlbum(p);
+    const SEP=['https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=300&h=300&fit=crop'];
+    const tile=im=>'<div style="height:100px;border-radius:13px;overflow:hidden;position:relative;cursor:pointer" onclick="photoView(\''+im+'\')"><img src="'+im+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)"></div>';
+    return '<div class="card" style="padding:12px 14px;margin-bottom:12px;display:flex">'+
+    [['📷','照片总数',(OCT.length+4)+' 张'],['🗓️','本月新增',OCT.length+' 张'],['🏆','最早记录','2026.9']].map(s=>'<div style="flex:1;text-align:center;'+(s[0]==='🗓️'?'border-left:1px solid rgba(0,0,0,.06);border-right:1px solid rgba(0,0,0,.06)':'')+'"><div style="font-size:14px;font-weight:800">'+s[2]+'</div><div style="font-size:10px;color:var(--sub);margin-top:2px">'+s[1]+'</div></div>').join('')+'</div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px"><b style="font-size:12.5px">2026年10月</b><span class="chip" style="font-size:9.5px">'+OCT.length+' 张</span></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+OCT.map(tile).join('')+'<div style="height:100px;border-radius:13px;border:1.5px dashed rgba(58,123,213,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#5B8DEF;cursor:pointer;background:rgba(255,255,255,.4)" onclick="uploadAlbumPhoto()"><span style="font-size:19px">＋</span><span style="font-size:10px;font-weight:700">上传照片</span></div></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px"><b style="font-size:12.5px">2026年9月</b><span class="chip" style="font-size:9.5px">4 张</span></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+SEP.map(tile).join('')+'</div>'+
+    '<div style="font-size:10.5px;color:var(--sub);margin-bottom:10px">上传失败自动重试1次，失败条目角标红色感叹号 · 上传前压缩至1920px · 点击照片可放大预览</div>';
   }
   if(profTab==='remind'){
     const rms=S.reminders.filter(r=>r.pet===p.id);
@@ -108,18 +113,6 @@ function profBody(p){
     '<div class="card chov" style="padding:13px 15px;display:flex;align-items:center;gap:11px;cursor:pointer" onclick="go(\'monitor\')"><div style="width:40px;height:40px;border-radius:13px;background:rgba(59,183,134,.13);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon" style="color:#3BB786"><use href="#i-video"/></svg></div><div style="flex:1"><div style="font-size:13px;font-weight:700">卧室摄像头</div><div style="font-size:10.5px;color:#3BB786">在线 · 信号中</div></div><svg class="icon icon-s" style="color:#C9D2DD"><use href="#i-right"/></svg></div>';
   }
 }
-/* 成长相册（更新宠物日常）：照片持久化于宠物家园状态，上传使人宠世界成长值+5 */
-const ALBUM_POOL=['https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1600275669439-14e40452d20b?w=300&h=300&fit=crop'];
-function petAlbum(p){const g=petGarden(p);if(!g.album||!g.album.length)g.album=ALBUM_POOL.slice(0,6);return g.album}
-function uploadAlbumPhoto(){
-  const p=curPet();const alb=petAlbum(p);
-  const cand=ALBUM_POOL.filter(u=>!alb.includes(u));
-  const pool=cand.length?cand:ALBUM_POOL;
-  alb.unshift(pool[Math.floor(Math.random()*pool.length)]);
-  save();renderProfile();
-  addWorldGrowth(5,'更新宠物日常');
-  toast('已添加 1 张照片至成长相册 · 成长值+5');
-}
 function recCard(r){
   const t=RTYPES.find(x=>x.id===r.type);
   const fields={vaccine:[['品牌',r.brand],['批号',r.batch],['医院',r.hospital],['方式',r.way],['下次到期',r.next]],
@@ -130,8 +123,9 @@ function recCard(r){
   return '<div class="card record-item" style="padding:13px 15px;margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span class="chip" style="background:'+t.c+'1c;color:'+t.c+';font-size:10px">'+t.n+'</span><b style="font-size:13.5px">'+esc(r.name)+'</b><span style="font-size:10.5px;color:var(--sub)">'+r.date+'</span><span style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:10px;color:var(--sub)"><div style="width:16px;height:16px;border-radius:50%;background:#DCE9FA;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#5B8DEF">'+(r.by||'我')[0]+'</div>'+(r.by||'我')+'</span></div>'+
   (fields.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">'+fields.map(f=>'<span style="font-size:10.5px;color:var(--sub);background:rgba(0,0,0,.03);padding:3px 8px;border-radius:8px">'+f[0]+'：'+esc(f[1])+'</span>').join('')+'</div>':'')+
   (r.note?'<div style="font-size:11.5px;color:#666">'+esc(r.note)+'</div>':'')+
-  '<div style="display:flex;gap:14px;margin-top:8px;font-size:11px;color:var(--blue-d)"><span style="cursor:pointer" onclick="editRec(\''+r.id+'\')">编辑</span><span style="cursor:pointer;color:#F05B5B" onclick="confirmDlg(\'删除记录\',\'删除后不可恢复，操作将记录日志\',\'删除\',()=>{S.records=S.records.filter(x=>x.id!==\''+r.id+'\');save();renderProfile();toast(\'已删除\')},\'danger\')">删除</span></div></div>';
+  '<div style="display:flex;gap:14px;margin-top:8px;font-size:11px;color:var(--blue-d)"><span style="cursor:pointer" onclick="editRec(\''+r.id+'\')">编辑</span><span style="cursor:pointer;color:#F05B5B" onclick="confirmDlg(\'删除记录\',\'删除后不可恢复，操作将记录日志\',\'删除\',()=>{S.records=S.records.filter(x=>x.id!==\''+r.id+'\');save();renderHealth();toast(\'已删除\')},\'danger\')">删除</span></div></div>';
 }
+function photoView(im){openModal('<img src="'+im+'" style="width:100%;border-radius:16px;background:linear-gradient(135deg,#C9DCF5,#EAD9C2);min-height:200px" onerror="imgErr(this)"><div style="font-size:11px;color:var(--sub);text-align:center;margin-top:10px">成长相册 · 点击外部区域关闭</div>')}
 function openRecForm(r){
   const t=RTYPES.find(x=>x.id===recType);
   const F={
@@ -162,7 +156,7 @@ function saveRec(id){
     if(recType==='deworm')base.dtype=window._dtype;
     S.records.unshift(base);addWorldGrowth(5,'更新宠物日常');toast('保存成功，记录人标识已落库 · 成长值+5');
   }
-  save();closeSheet();renderProfile();
+  save();closeSheet();renderHealth();
 }
 function doneRemind(id){
   const r=S.reminders.find(x=>x.id===id);
@@ -224,68 +218,15 @@ function savePet(){
   save();go('profile');
 }
 
-/* ============ 健康数据页（M4） ============ */
-function renderHealth(){
-  const p=curPet();
-  const ws=S.daily.filter(d=>d.pet===p.id&&d.k==='weight').sort((a,b)=>a.ts-b.ts).slice(-7);
-  const pts=ws.map((d,i)=>{const x=20+i*(300/(Math.max(ws.length-1,1)));const y=110-((d.v-4.8)/0.7)*80;return [x,Math.max(20,Math.min(110,y)),d]}).filter(pt=>pt[2]);
-  const path=pts.map((pt,i)=>(i?'L':'M')+pt[0].toFixed(1)+' '+pt[1].toFixed(1)).join(' ');
-  const todayDone=S.daily.some(d=>d.pet===p.id&&new Date(d.ts).toDateString()===new Date().toDateString());
-  const kNames={weight:'体重',water:'饮水量',poop:'便便',spirit:'精神',skin:'皮肤'};
-  const recs=[...S.daily.filter(d=>d.pet===p.id)].sort((a,b)=>b.ts-a.ts).slice(0,12);
-  /* 异常数据标红 + AI归因入口（PRD 模块二 5.2） */
-  let abnHtml='';
-  if(ws.length>=2){
-    const pw=ws[ws.length-2].v,cw=ws[ws.length-1].v;
-    if(pw>0&&(pw-cw)/pw>=0.05)abnHtml+='<div class="abn"><svg class="icon icon-s" style="color:#D94343;flex:none"><use href="#i-alert"/></svg><div style="flex:1;font-size:12px;color:#D94343;font-weight:700">体重骤降 '+((pw-cw)/pw*100).toFixed(1)+'%（'+pw+'→'+cw+'kg）</div><button class="btn btn-sm" style="width:auto;padding:6px 10px" onclick="openChat(\'attr\',\'体重从'+pw+'kg降到'+cw+'kg，生成异常归因报告\')">AI 归因</button></div>';
-  }
-  const softCnt=S.daily.filter(d=>d.pet===p.id&&d.k==='poop'&&Date.now()-d.ts<7*864e5&&d.v<=2).length;
-  if(softCnt>=2)abnHtml+='<div class="abn"><svg class="icon icon-s" style="color:#D94343;flex:none"><use href="#i-alert"/></svg><div style="flex:1;font-size:12px;color:#D94343;font-weight:700">近7日出现 '+softCnt+' 次软便/腹泻倾向</div><button class="btn btn-sm" style="width:auto;padding:6px 10px" onclick="openChat(\'attr\',\''+p.name+'近7日软便'+softCnt+'次，生成异常归因报告\')">AI 归因</button></div>';
-  $('health-body').innerHTML=
-  '<div class="subhdr"><svg class="icon" style="cursor:pointer" onclick="go(\'home\')"><use href="#i-back"/></svg><b style="font-size:15px">健康管理 · '+p.name+'</b><span style="margin-left:auto;font-size:11px;color:var(--blue-d);cursor:pointer" onclick="exportPdf()">导出PDF</span></div>'+
-  '<div style="padding:14px 16px">'+
-  (abnHtml?'<div style="margin-bottom:12px">'+abnHtml+'</div>':'')+
-  '<div class="card" style="padding:15px;margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:14px">体重趋势（近'+ws.length+'次）</b><span style="font-size:11px;color:var(--sub)">曲线取当日最后一次</span></div>'+
-  '<svg viewBox="0 0 340 130" style="width:100%">'+
-    '<line x1="20" y1="110" x2="330" y2="110" stroke="rgba(58,123,213,.2)"/><line x1="20" y1="63" x2="330" y2="63" stroke="rgba(58,123,213,.12)" stroke-dasharray="4 4"/><line x1="20" y1="20" x2="330" y2="20" stroke="rgba(58,123,213,.12)" stroke-dasharray="4 4"/>'+
-    '<text x="20" y="118" font-size="9" fill="#A8B2BE">4.8kg</text><text x="20" y="59" font-size="9" fill="#A8B2BE">5.15kg</text><text x="20" y="16" font-size="9" fill="#A8B2BE">5.5kg</text>'+
-    '<path d="'+path+'" stroke="url(#wgrad)" stroke-width="3" fill="none" class="wline" stroke-linecap="round"/>'+
-    '<defs><linearGradient id="wgrad" x1="0" x2="1"><stop offset="0" stop-color="#8FB6EE"/><stop offset="1" stop-color="#3A7BD5"/></linearGradient></defs>'+
-    pts.map((pt,i)=>'<g class="wdot" style="animation-delay:'+(0.3+i*0.12)+'s"><circle cx="'+pt[0]+'" cy="'+pt[1]+'" r="4.5" fill="#fff" stroke="#3A7BD5" stroke-width="2.5"/>'+((pts.length>6&&i%2)||i===pts.length-1?'<text x="'+(pt[0]-8)+'" y="'+(pt[1]-10)+'" font-size="9" fill="#5B8DEF" font-weight="700">'+pt[2].v+'kg</text>':'')+'</g>').join('')+
-  '</svg></div>'+
-  '<div class="card" style="padding:14px 15px;margin-bottom:12px"><b style="font-size:13.5px">今日快捷录入</b><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px">'+
-  [['体重','weight'],['饮水','water'],['便便','poop'],['精神','spirit'],['皮肤','skin']].map(q=>'<button class="btn btn-ghost btn-sm" style="display:flex;flex-direction:column;gap:1px;padding:8px 0" onclick="openAdd(\''+q[1]+'\')"><b>'+q[0]+'</b><span style="font-size:9px;font-weight:400">'+(q[1]==='weight'?(ws.length?ws[ws.length-1].v+'kg':'待录入'):'点录入')+'</span></button>').join('')+'</div>'+
-  (todayDone?'<div style="font-size:10px;color:#3BB786;margin-top:8px">今日已完成打卡 · +15积分已发放</div>':'<div style="font-size:10px;color:var(--warn);margin-top:8px">今日未打卡，完成后虚拟宠物将同步获得活力</div>')+'</div>'+
-  '<div class="card" style="padding:14px 15px;margin-bottom:12px;background:linear-gradient(135deg,rgba(76,168,118,.1),rgba(59,183,134,.05))"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13.5px">健康周报</b><span class="chip" style="background:rgba(59,183,134,.15);color:#2E9C6F;font-size:10px">数据完整 7/7</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:6px;line-height:1.7">本周体重稳定（5.1→5.25kg），饮水/精神记录连续7天无异常。<br>AI建议：零食热量偏高，建议控制在15g/日内；维持当前主粮方案。</div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm" style="flex:1" onclick="tabTo(\'ai\');openChat(\'attr\',\'生成本周健康周报的归因分析\')">AI 归因</button><button class="btn btn-sm btn-ghost" style="flex:1" onclick="toast(\'分享海报已生成，可保存或站外分享\')">生成分享海报</button></div></div>'+
-  '<div class="card" style="padding:14px 15px"><b style="font-size:13.5px">数据记录</b>'+
-  recs.map(d=>'<div style="display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><svg class="icon icon-s" style="color:var(--blue-d)"><use href="#i-chart"/></svg><div style="flex:1"><div style="font-size:12.5px;font-weight:600">'+kNames[d.k]+'：'+d.v+(d.k==='weight'?'kg':d.k==='water'?'ml':'')+'</div><div style="font-size:10px;color:var(--sub)">'+fmtTs(d.ts)+' · 记录人 '+d.by+(d.fixed?' · <span style="color:#E8A23A">已修正，原值 '+d.orig+'kg</span>':'')+'</div></div>'+(d.fixed?'':'<button class="btn btn-sm btn-ghost" style="padding:5px 10px;font-size:10px" onclick="fixDaily(\''+d.ts+'\')">修正</button>')+'</div>').join('')+
-  '</div></div>';
-}
-function openAdd(k){
-  const labels={weight:'今日体重（kg）',water:'今日饮水量（ml）',poop:'便便状态（1-5档）',spirit:'精神状态（1-5档）',skin:'皮肤状态（1-5档，5为最佳）'};
-  openSheet('录入 · '+labels[k],'<input class="input" id="dvIn" inputmode="decimal" placeholder="'+(k==='poop'||k==='spirit'||k==='skin'?'1（差）~ 5（好），如 4':'如 '+(k==='weight'?'5.2':'180'))+'" style="margin-bottom:10px"><div style="font-size:10.5px;color:#A8B2BE;margin-bottom:14px">'+(k==='weight'?'同日多次录入：多条并存，曲线取当日最后一次':'同日重复录入将提示覆盖或新增')+'</div><button class="btn" onclick="submitDaily(\''+k+'\')">提交 · 触发异常判定</button>');
-}
-function submitDaily(k){
-  const v=+$('dvIn').value;
-  if(!v||v<=0){toast('请输入有效数值');return}
-  const dup=S.daily.filter(x=>x.pet===S.curPet&&x.k===k&&k!=='weight'&&new Date(x.ts).toDateString()===new Date().toDateString()).length;
-  closeSheet();
-  quickAdd(k,v);
-  const gg=petGarden(curPet());gg.vitality=Math.min(100,gg.vitality+5);
-  save();
-  if($('pg-health').classList.contains('on'))renderHealth();
-  if(!dup)toast('录入完成：健康判定通过，虚拟'+curPet().name+'活力+5');
-}
-function fixDaily(ts){
-  const d=S.daily.find(x=>x.ts===ts);if(!d)return;
-  openSheet('修正记录','<div style="font-size:12px;color:var(--sub);margin-bottom:10px">当前值：'+d.v+'（'+(d.k==='weight'?'kg':d.k==='water'?'ml':'档')+'）</div><input class="input" id="fxIn" inputmode="decimal" placeholder="输入修正后的值" style="margin-bottom:12px"><button class="btn" onclick="doFix('+ts+')">确认修正</button>');
-}
-function doFix(ts){
-  const d=S.daily.find(x=>x.ts===ts);const v=+$('fxIn').value;
-  if(!v){toast('请输入数值');return}
-  d.orig=d.v;d.v=v;d.fixed=true;d.by=S.user.nick;
-  save();closeSheet();renderHealth();toast('已修正（原值 '+d.orig+'），并重新触发异常判定');
-}
-function exportPdf(){
-  openSheet('导出健康记录 PDF','<div style="font-size:12px;font-weight:700;margin-bottom:8px">选择导出范围</div><div style="display:flex;gap:8px;margin-bottom:14px">'+['近1个月','近3个月','近1年','全部'].map((r,i)=>'<button class="skuBtn'+(i===1?' act':'')+'" onclick="document.querySelectorAll(\'#sheetBody .skuBtn\').forEach(b=>b.classList.remove(\'act\'));this.classList.add(\'act\')">'+r+'</button>').join('')+'</div><div style="font-size:11px;color:var(--sub);margin-bottom:14px">导出内容：范围内记录时间轴 + 体重趋势图 + 档案基础信息</div><button class="btn" onclick="closeSheet();toast(\'PDF已生成（≤5s），已保存至本地并支持分享\')">生成 PDF（演示）</button>');
+/* 成长相册（更新宠物日常）：照片持久化于宠物家园状态，上传使人宠世界成长值+5 */
+const ALBUM_POOL=['https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1600275669439-14e40452d20b?w=300&h=300&fit=crop'];
+function petAlbum(p){const g=petGarden(p);if(!g.album||!g.album.length)g.album=ALBUM_POOL.slice(0,6);return g.album}
+function uploadAlbumPhoto(){
+  const p=curPet();const alb=petAlbum(p);
+  const cand=ALBUM_POOL.filter(u=>!alb.includes(u));
+  const pool=cand.length?cand:ALBUM_POOL;
+  alb.unshift(pool[Math.floor(Math.random()*pool.length)]);
+  save();renderProfile();
+  addWorldGrowth(5,'更新宠物日常');
+  toast('已添加 1 张照片至成长相册 · 成长值+5');
 }

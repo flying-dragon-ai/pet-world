@@ -1,47 +1,3 @@
-/* ============ 消息中心（M10） ============ */
-let msgTab='互动';
-function renderMessages(){
-  const cats=['互动','系统','健康','订单'];
-  const ms=S.msgs.filter(m=>m.cat===msgTab);
-  $('messages-body').innerHTML=
-  '<div class="subhdr" style="margin:-12px -16px 12px"><svg class="icon" style="cursor:pointer" onclick="go(\'home\')"><use href="#i-back"/></svg><b style="font-size:15px">消息中心</b><span style="margin-left:auto;font-size:11px;color:var(--blue-d);cursor:pointer" onclick="S.msgs.forEach(m=>m.read=true);save();renderMessages();toast(\'已全部标记已读\')">全部已读</span></div>'+
-  '<div style="display:flex;gap:8px;margin-bottom:14px">'+cats.map(c=>'<button class="rTab'+(c===msgTab?' act':'')+'" onclick="msgTab=\''+c+'\';renderMessages()">'+c+'</button>').join('')+'</div>'+
-  (ms.length?ms.map(m=>'<div class="card chov" style="padding:13px 15px;margin-bottom:9px;display:flex;gap:11px;cursor:pointer;'+(m.read?'opacity:.65':'')+'" onclick="readMsg(\''+m.id+'\')"><div style="width:38px;height:38px;border-radius:13px;background:rgba(74,144,217,.12);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon" style="color:var(--blue-d)"><use href="#'+m.icon+'"/></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px"><b style="font-size:13px">'+m.title+'</b>'+(m.read?'':'<span style="width:7px;height:7px;border-radius:50%;background:var(--danger)"></span>')+'</div><div style="font-size:11.5px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.txt+'</div></div><span style="font-size:10px;color:var(--sub);flex:none">'+fmtTs(m.ts)+'</span></div>').join(''):'<div class="card" style="padding:26px;text-align:center;font-size:12.5px;color:var(--sub)">暂无消息</div>')+
-  '<div style="font-size:10px;color:#A8B2BE;text-align:center;margin-top:8px">点击消息按深链路由表直达目标页并定位上下文</div>';
-}
-function readMsg(id){
-  const m=S.msgs.find(x=>x.id===id);m.read=true;save();renderTabBadges();
-  const t=m.link[0];
-  if(t==='profile'){profTab=(m.link[1]==='vaccine')?'health':'family';recType='vaccine';renderProfile();go('profile');toast('深链直达：档案提醒管理页并展开该条提醒')}
-  else if(t==='monitor'){go('monitor');toast('深链直达：事件流定位 14:32')}
-  else if(t==='community'){go('community');openNotifSheet();toast('深链直达：互动消息（赞/评论/回复）')}
-  else if(t==='orders'){ordTab='全部';go('orders')}
-  else go('community');
-}
-/* ============ 携宠旅游（M9） ============ */
-let travCity='全部';
-function renderTravel(){
-  const cities=['全部',...new Set(S.dests.map(d=>d.city))];
-  const ds=travCity==='全部'?S.dests:S.dests.filter(d=>d.city===travCity);
-  $('travel-body').innerHTML=
-  '<div class="subhdr" style="margin:-12px -16px 12px"><svg class="icon" style="cursor:pointer" onclick="go(\'home\')"><use href="#i-back"/></svg><b style="font-size:15px">携宠旅游</b><button class="btn btn-sm" style="margin-left:auto;display:flex;align-items:center;gap:4px" onclick="tabTo(\'ai\');openChat(\'trip\',\'周末带'+curPet().name+'两日游怎么安排？\')"><svg class="icon icon-s"><use href="#i-spark"/></svg>AI 行程</button></div>'+
-  '<div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none">'+cities.map(c=>'<button class="rTab'+(c===travCity?' act':'')+'" onclick="travCity=\''+c+'\';renderTravel()">'+c+'</button>').join('')+'</div>'+
-  ds.map(d=>'<div class="card chov" style="overflow:hidden;margin-bottom:12px;cursor:pointer" onclick="destSheet(\''+d.id+'\')"><div style="position:relative;height:140px"><img src="'+d.img+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)"><span class="chip" style="position:absolute;top:10px;left:10px;background:rgba(255,255,255,.85);color:var(--blue-d)">'+d.city+' · '+d.scene+'</span><span style="position:absolute;top:10px;right:10px;cursor:pointer" onclick="event.stopPropagation();favDest(\''+d.id+'\')"><svg class="icon" style="color:'+(S.myFavs['d_'+d.id]?'#E8A23A':'rgba(255,255,255,.85)')+'"><use href="#i-star"/></svg></span></div><div style="padding:11px 14px 13px"><div style="font-size:14px;font-weight:800">'+d.name+'</div><div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap">'+d.tags.map(t=>'<span class="chip" style="font-size:10px">'+t+'</span>').join('')+'</div></div></div>').join('');
-}
-function favDest(id){
-  if(S.myFavs['d_'+id])delete S.myFavs['d_'+id];else S.myFavs['d_'+id]=1;
-  save();renderTravel();
-  toast(S.myFavs['d_'+id]?'已收藏，可在「我的-收藏-目的地」查看':'已取消收藏');
-}
-function destSheet(id){
-  const d=S.dests.find(x=>x.id===id);
-  openSheet(d.name,
-  '<div style="height:150px;border-radius:16px;overflow:hidden;margin-bottom:12px"><img src="'+d.img+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)"></div>'+
-  '<div style="display:flex;gap:6px;margin-bottom:10px">'+d.tags.map(t=>'<span class="chip" style="font-size:10.5px">'+t+'</span>').join('')+'<span class="chip" style="background:rgba(76,168,118,.13);color:#3A9C6B;font-size:10.5px">'+d.pet+'</span></div>'+
-  '<div style="font-size:12.5px;color:#555;line-height:1.7;margin-bottom:14px">'+d.txt+'</div>'+
-  '<div class="card" style="padding:11px 13px;font-size:11.5px;color:var(--sub);margin-bottom:14px;line-height:1.7">【携宠清单】便携水碗 · 常用药 · 疫苗本（当前宠物：'+curPet().name+'，疫苗在有效期内）· 应急联系卡 · 拾便袋</div>'+
-  '<div style="display:flex;gap:8px"><button class="btn btn-sm" style="flex:1" onclick="closeSheet();tabTo(\'ai\');openChat(\'trip\',\'帮我规划'+d.city+'两日携宠行程\')">AI 规划行程</button><button class="btn btn-sm btn-ghost" style="flex:1" onclick="closeSheet();toast(\'清单已保存到收藏\')">收藏清单</button></div>');
-}
 /* ============ 活动组局（M6，V1.5新增，对标“粗门”） ============ */
 let actCat='全部',actCity='全部';
 function renderAct(){
@@ -187,7 +143,7 @@ function renderSettings(){
   '</div>'+
   '<div class="card" style="padding:5px 16px;margin-bottom:14px">'+
   '<div style="display:flex;align-items:center;padding:13px 2px;cursor:pointer" onclick="acctSheet()"><div style="flex:1"><div style="font-size:13px;font-weight:600">账号与安全</div><div style="font-size:10.5px;color:var(--sub)">退出登录 / 注销账号</div></div><svg class="icon icon-s" style="color:#C9D2DD"><use href="#i-right"/></svg></div>'+
-  '<div style="display:flex;align-items:center;padding:13px 2px;border-top:1px solid rgba(0,0,0,.05)"><div style="flex:1"><div style="font-size:13px;font-weight:600">关于</div><div style="font-size:10.5px;color:var(--sub)">宠物数字管家 V1.7.0 人宠世界版 · 已是最新</div></div></div>'+
+  '<div style="display:flex;align-items:center;padding:13px 2px;border-top:1px solid rgba(0,0,0,.05)"><div style="flex:1"><div style="font-size:13px;font-weight:600">关于</div><div style="font-size:10.5px;color:var(--sub)">宠物数字管家 V1.7.4 正式版 · 已是最新</div></div></div>'+
   '</div>'+
   '<button class="btn btn-ghost" style="color:#F05B5B;border-color:rgba(240,91,91,.35)" onclick="confirmDlg(\'重置演示数据\',\'将清空本地所有演示数据并恢复初始预置数据\',\'重置\',()=>{S=seed();save();location.reload()},\'danger\')">重置演示数据</button>'+
   '</div>';
@@ -219,98 +175,5 @@ function cancelAcct(){
 function doCancelAcct(){
   if(!$('acctOk').checked){toast('请先勾选「我已了解」');return}
   closeModal();toast('已提交注销申请：冷静期7天，期间登录将自动取消');
-}
-
-/* ============ 删除宠物档案============ */
-function delPet(){
-  const p=curPet();
-  confirmDlg('删除宠物档案','将删除「'+p.name+'」的档案、健康记录、提醒与家园数据，操作不可恢复','确认删除',()=>{
-    S.pets=S.pets.filter(x=>x.id!==p.id);
-    S.records=S.records.filter(r=>r.pet!==p.id);
-    S.reminders=S.reminders.filter(r=>r.pet!==p.id);
-    S.daily=S.daily.filter(d=>d.pet!==p.id);
-    if(S.pets.length){S.curPet=S.pets[0].id;save();renderProfile();toast('已删除，已自动切换至「'+curPet().name+'」')}
-    else{save();window._editPet=null;profTab='health';go('petedit');toast('档案已清空，请新建宠物')}
-  },'danger');
-}
-
-/* ============ 形象生成向导============ */
-const FURS=[['经典橘','#F5B85C'],['奶白','#F1EDE4'],['银灰','#B9BFC9'],['玄黑','#6B6B78'],['奶棕','#C9955C']];
-const AW_ACC=[['无',''],['红项圈','collar'],['蝴蝶结','bow'],['小围巾','scarf'],['生日帽','hat']];
-const AWSAMPLE=['https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=300&h=300&fit=crop'];
-function openAvatarWizard(){window._aw={step:1,img:'',fur:'',acc:'',pat:'',low:false};openModal('');renderAW()}
-function renderAW(){
-  const a=window._aw,p=curPet();let h='';
-  if(a.step===1){
-    h='<div style="font-size:16px;font-weight:900;margin-bottom:4px">生成虚拟形象 · 1/4 上传照片</div><div style="font-size:11px;color:var(--sub);margin-bottom:12px">上传后本地预检：清晰度 / 宠物面部占比≥15% / 光照</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">'+AWSAMPLE.map((im,i)=>'<div style="height:70px;border-radius:12px;overflow:hidden;cursor:pointer;'+(a.img===im?'outline:2.5px solid var(--blue-d)':'')+'" onclick="awPick('+i+')"><img src="'+im+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)"></div>').join('')+'</div>'+
-    '<div style="font-size:10.5px;color:#9AA9BC;margin-bottom:10px;cursor:pointer;text-decoration:underline" onclick="awLow()">模拟：光线过暗的照片（预检不通过演示）</div>'+
-    (a.low?'<div class="emg" style="padding:9px 12px;font-size:11.5px;color:#D94343;margin-bottom:10px;border-color:rgba(240,91,91,.35)">光照检测未通过：光线有点暗，找个亮一点的地方再拍一张吧</div>':'')+
-    (a.img&&!a.low?'<button class="btn" onclick="awCheck()">开始质量检测</button>':'');
-  } else if(a.step===1.5){
-    h='<div style="text-align:center;padding:10px 0"><div class="spin" style="border-color:rgba(58,123,213,.25);border-top-color:var(--blue-d)"></div><div style="font-size:12.5px;color:var(--sub);margin-top:12px">正在检测照片质量…</div></div>';
-  } else if(a.step===1.7){
-    h='<div style="font-size:16px;font-weight:900;margin-bottom:8px">质量检测结果</div>'+
-    [['清晰度','✓ 通过'],['面部占比','✓ 32%（≥15%）'],['光照','✓ 通过']].map(r=>'<div style="display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid rgba(0,0,0,.05);font-size:12.5px"><span>'+r[0]+'</span><b style="color:#3BB786">'+r[1]+'</b></div>').join('')+
-    '<button class="btn" style="margin-top:14px" onclick="window._aw.step=2;renderAW()">通过，开始生成</button>';
-  } else if(a.step===2){
-    h='<div style="font-size:16px;font-weight:900;margin-bottom:4px">生成虚拟形象 · 2/4 AI生成</div><div style="text-align:center;padding:8px 0"><div class="spin" style="border-color:rgba(58,123,213,.25);border-top-color:var(--blue-d)"></div><div style="font-size:12.5px;color:var(--sub);margin-top:12px">AI 正在为 '+p.name+' 生成3D虚拟形象<br>（≤15s，演示已加速）</div></div>';
-    setTimeout(()=>{if(window._aw.step===2&&$('modalWrap').classList.contains('show')){window._aw.step=3;renderAW()}},1800);
-  } else if(a.step===3){
-    const prev={...p,fur:a.fur,acc:a.acc};
-    h='<div style="font-size:16px;font-weight:900;margin-bottom:6px">生成虚拟形象 · 3/4 六项微调</div>'+
-    '<div style="text-align:center;margin-bottom:10px"><div style="width:120px;height:120px;display:inline-block">'+petSVG(prev,120,'happy')+'</div></div>'+
-    '<div style="font-size:11px;font-weight:700;margin-bottom:5px">毛色</div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">'+FURS.map(f=>'<button class="skuBtn'+(a.fur===f[1]?' act':'')+'" style="padding:6px 10px" onclick="awSet(\'fur\',\''+f[1]+'\')">'+f[0]+'</button>').join('')+'</div>'+
-    '<div style="font-size:11px;font-weight:700;margin-bottom:5px">配饰</div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">'+AW_ACC.map(x=>'<button class="skuBtn'+(a.acc===x[1]?' act':'')+'" style="padding:6px 10px" onclick="awSet(\'acc\',\''+x[1]+'\')">'+x[0]+'</button>').join('')+'</div>'+
-    '<div style="font-size:11px;font-weight:700;margin-bottom:5px">花纹 · 眼型 · 体型（组合记录）</div><div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+['纯色·圆眼·标准','斑点·杏眼·偏瘦','条纹·圆眼·圆润'].map(t=>'<button class="skuBtn'+(a.pat===t?' act':'')+'" style="padding:6px 10px" onclick="awSet(\'pat\',\''+t+'\')">'+t+'</button>').join('')+'</div>'+
-    '<div style="display:flex;gap:8px"><button class="btn btn-ghost" style="flex:1" onclick="window._aw.step=2;renderAW()">重新生成</button><button class="btn" style="flex:1" onclick="window._aw.step=4;renderAW()">下一步</button></div>';
-  } else {
-    const prev={...p,fur:a.fur,acc:a.acc};
-    h='<div style="font-size:16px;font-weight:900;margin-bottom:6px">生成虚拟形象 · 4/4 定稿</div>'+
-    '<div style="text-align:center;margin-bottom:8px"><div style="width:110px;height:110px;display:inline-block">'+petSVG(prev,110,'happy')+'</div></div>'+
-    '<div class="card" style="padding:9px 12px;font-size:11px;color:var(--warn);margin-bottom:10px;background:rgba(245,166,35,.1);border-color:rgba(245,166,35,.35)">定稿后模型与配饰不可修改，请确认预览效果</div>'+
-    '<div style="display:flex;gap:8px"><button class="btn btn-ghost" style="flex:1" onclick="window._aw.step=3;renderAW()">返回微调</button><button class="btn" style="flex:1" onclick="awDone()">确认并进入家园</button></div>';
-  }
-  $('modalBox').innerHTML=h;
-}
-function awPick(i){window._aw.img=AWSAMPLE[i];window._aw.low=false;renderAW()}
-function awLow(){window._aw.low=true;renderAW()}
-function awCheck(){window._aw.step=1.5;renderAW();setTimeout(()=>{if(window._aw.step===1.5&&$('modalWrap').classList.contains('show')){window._aw.step=1.7;renderAW()}},1000)}
-function awSet(k,v){window._aw[k]=v;renderAW()}
-function awDone(){
-  const a=window._aw,p=curPet();
-  p.fur=a.fur||'';p.acc=a.acc||'';p.pat=a.pat||'';
-  save();closeModal();
-  openWorld();
-  toast('形象已定稿，「'+p.name+'」换新形象入驻世界');
-}
-
-
-/* ============ 单点登录顶下线============ */
-function kickDemo(){
-  openModal('<div style="text-align:center"><svg class="icon icon-l" style="color:var(--warn);margin:auto"><use href="#i-alert"/></svg><div style="font-weight:900;font-size:15px;margin:8px 0">您的账号已在另一台设备登录</div><div style="font-size:12px;color:var(--sub);margin-bottom:14px;line-height:1.7">为保障账号安全，本设备已退出登录状态。<br>重新登录后将自动回跳当前页面并恢复上下文。</div><div style="display:flex;gap:10px"><button class="btn btn-ghost" onclick="kickLogout()">退出</button><button class="btn" onclick="kickRelogin()">重新登录</button></div></div>');
-}
-function kickRelogin(){closeModal();toast('模拟重新登录成功，已回跳原页面并恢复上下文')}
-function kickLogout(){closeModal();S.loggedIn=false;save();location.reload()}
-
-/* ============ 设备绑定向导============ */
-function bindWizard(){
-  openModal('<div style="font-weight:900;font-size:15px;margin-bottom:4px">添加设备</div><div style="font-size:11px;color:var(--sub);margin-bottom:12px">绑定中断（来电/切后台）将保留进度；权限拒绝提供说明页（演示简化）</div><button class="btn btn-sm btn-ghost" style="margin-bottom:12px" onclick="toast(\'已打开扫码（演示），请使用序列号方式\')">扫码绑定（演示）</button><input class="input" id="snIn" placeholder="或输入设备序列号（≥4位，如 882310）" style="margin-bottom:10px"><button class="btn" onclick="bindConnect()">下一步</button>');
-}
-function bindConnect(){
-  const sn=$('snIn').value.trim();
-  if(sn.length<4){toast('请输入至少4位序列号');$('snIn').classList.add('shake');setTimeout(()=>$('snIn').classList.remove('shake'),450);return}
-  openModal('<div style="text-align:center;padding:10px 0"><div class="spin" style="border-color:rgba(58,123,213,.25);border-top-color:var(--blue-d)"></div><div style="font-size:12.5px;color:var(--sub);margin-top:12px">设备联网中…（配网 2.4G Wi-Fi）</div></div>');
-  setTimeout(()=>{
-    if(!$('modalWrap').classList.contains('show'))return;
-    openModal('<div style="font-weight:900;font-size:15px;margin-bottom:10px">给设备起个名字</div><input class="input" id="devName" value="阳台摄像头" style="margin-bottom:12px"><button class="btn" onclick="bindDone()">完成绑定</button>');
-  },1300);
-}
-function bindDone(){
-  const n=$('devName').value.trim()||('摄像头'+((S.devices||[]).length+1));
-  if(!S.devices)S.devices=[];
-  S.devices.push(n);save();closeModal();
-  mon.dev=S.devices.length-1;
-  renderMonitor();toast('「'+n+'」绑定成功，已加入设备列表');
 }
 

@@ -1,26 +1,21 @@
-/* ============ 离线结算============ */
 /* ============ 首页（V1.6：AI搜索框 / 形象照片切换 / 点击宠物看成长档案 / 磁贴tab化 / 今日任务模块） ============ */
-var heroImgMode=true,homeSvcTab='svc';
-const SVC_TABS=[
-  ['svc','宠物服务',[['宠物商城','精选好物 · AI导购','i-cart','#E8945A',"go('mall')"],['人宠世界','虚拟挂机 · 上学打工','i-paw','#8B5CF6',"openWorld()"]]],
-  ['care','健康陪伴',[['健康打卡','数据记录 · 周报','i-med','#4CA876',"go('health')"],['成长相册','时光记忆 · 宠物照片','i-img','#3AB5C0',"profTab='album';go('profile')"]]],
-  ['out','出行组局',[['活动组局','遛宠聚会 · 赛事市集','i-cal','#F05B5B',"go('act')"],['携宠旅游','友好目的地攻略','i-pin','#8B7DE8',"go('travel')"]]]
+var heroImgMode=true;
+const HOME_CARE=[
+  ['成长记录','成长数据 · 健康周报','i-chart','#4CA876',"go('health')"],
+  ['成长相册','时光记忆 · 宠物照片','i-img','#3AB5C0',"profTab='album';go('profile')"]
 ];
 function toggleHeroImg(){heroImgMode=!heroImgMode;renderHome();toast(heroImgMode?'已切换显示真实照片':'已切换显示动态卡通头像')}
-function aiSearchGo(){
-  const i=$('homeSearch');const q=i&&i.value.trim();
-  openChat('ask',q||('我家'+curPet().name+'最近状态怎么样？'));
-  if(i)i.value='';
-}
-function aiSearchVoice(){
-  if(window._vbusy)return;window._vbusy=true;
-  toast('正在聆听…');
-  setTimeout(()=>{
-    window._vbusy=false;
-    const T=['我家'+curPet().name+'今天呕吐了两次，持续约2小时，需要就医吗',curPet().name+'每天该喂多少克','这周'+curPet().name+'体重变化正常吗','推荐适合'+curPet().name+'的猫粮'];
-    openChat('ask',T[Math.floor(Math.random()*T.length)]);
-    toast('语音识别完成（演示），已发送给AI');
-  },1200);
+/* V1.7.1 点击搜索条直接跳转 AI 对话页 */
+function aiSearchFocus(){tabTo('ai');setTimeout(()=>{const i=$('chatIn');if(i)i.focus()},350)}
+function heroLive(){
+  const r=LVROOMS[0];
+  return '<div style="margin:14px -18px 0;border-top:1px solid rgba(255,255,255,.14);padding:10px 18px 14px">'+
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span class="live-dot"></span><b style="font-size:12px;color:#fff">Live</b><span style="font-size:9.5px;color:rgba(255,255,255,.55)">'+LVROOMS.length+' 个直播中</span><span style="margin-left:auto;font-size:9.5px;color:rgba(255,255,255,.8);cursor:pointer" onclick="event.stopPropagation();liveOpen(true)">小窗播放 ›</span></div>'+
+    '<div style="display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:8px;cursor:pointer" onclick="live.room=0;liveExpand()">'+
+      '<div style="width:96px;height:62px;border-radius:10px;overflow:hidden;flex:none;position:relative"><img src="'+r.cover+'" style="width:100%;height:100%;object-fit:cover;object-position:72% 50%" onerror="imgErr(this)"><span style="position:absolute;top:4px;left:4px;font-size:8px;color:#fff;background:rgba(255,77,79,.92);border-radius:999px;padding:1px 6px;font-weight:800;display:flex;align-items:center;gap:3px"><span class="live-dot" style="background:#fff;width:4px;height:4px"></span>LIVE</span><span style="position:absolute;bottom:4px;left:4px;font-size:8.5px;color:#fff;background:rgba(0,0,0,.55);border-radius:999px;padding:1px 6px">'+r.viewers.toLocaleString()+' 人观看</span></div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+r.title+'</div><span style="display:inline-block;margin-top:9px;font-size:9px;color:#fff;background:linear-gradient(135deg,#FF7A45,#FF4D4F);border-radius:999px;padding:3px 10px;font-weight:800">点击进入直播间 ›</span></div>'+
+    '</div>'+
+  '</div>';
 }
 function openPetGrowCard(){
   const p=curPet(),g=petGarden(p),lvl=petLevel(p);
@@ -41,7 +36,7 @@ function renderHome(){
   const p=curPet(),g=petGarden(p);
   const mood=g.mood>=60?'happy':(g.mood>=30?'normal':'sick');
   const unread=S.msgs.filter(m=>!m.read).length;
-  const HK=[['feed','给'+p.name+'喂食一次','+10','i-bowl','#E8945A',"quickFeed()"],['touch','抚摸'+p.name+' 3次','+10','i-heart','#E8709A',"openWorld()"],['health','完成一次健康打卡','+15','i-med','#4CA876',"go('health')"]];
+  const HK=[['feed','给'+p.name+'喂食一次','+10','i-bowl','#E8945A',"openWorld()"],['touch','抚摸'+p.name+' 3次','+10','i-heart','#E8709A',"openWorld()"],['health','完成一次健康打卡','+15','i-med','#4CA876',"go('health')"]];
   const taskDone=HK.filter(t=>g.tasks[t[0]]===today()).length;
   const recentW=[...S.daily.filter(d=>d.pet===p.id&&d.k==='weight')].sort((a,b)=>a.ts-b.ts);
   const lastW=recentW.length?recentW[recentW.length-1].v:p.weight;
@@ -51,12 +46,11 @@ function renderHome(){
   const hour=new Date().getHours();
   const hello=hour<6?'夜深了':hour<11?'早上好':hour<14?'中午好':hour<18?'下午好':'晚上好';
   $('home-body').innerHTML=
-  /* V1.6 首页顶部AI搜索框（文字回车/点发送 → AI聊天；麦克风 → 语音识别后发送） */
-  '<div class="card" style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:12px">'+
+  /* V1.7.1 AI咨询入口：点击整条直接跳转AI对话页 */
+  '<div class="card" style="display:flex;align-items:center;gap:8px;padding:10px 14px;margin-bottom:12px;cursor:pointer" onclick="aiSearchFocus()">'+
     '<svg class="icon icon-s" style="color:#8FA8C9;flex:none"><use href="#i-search"/></svg>'+
-    '<input id="homeSearch" placeholder="问问 AI：症状 / 喂养 / 行为…" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:13px;color:var(--ink)" onkeydown="if(event.key===\'Enter\')aiSearchGo()">'+
-    '<span title="发送给AI" onclick="aiSearchGo()" style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#5B8DEF,#3A7BD5);display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer;box-shadow:0 4px 10px rgba(58,123,213,.35)"><svg class="icon icon-s" style="color:#fff"><use href="#i-send"/></svg></span>'+
-    '<span title="语音提问" onclick="aiSearchVoice()" style="width:30px;height:30px;border-radius:50%;background:rgba(74,144,217,.1);display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer"><svg class="icon icon-s" style="color:var(--blue-d)"><use href="#i-mic"/></svg></span>'+
+    '<span style="flex:1;font-size:13px;color:#A8B2BE">问问 AI：症状 / 喂养 / 行为…</span>'+
+    '<svg class="icon icon-s" style="color:#C9D2DD;flex:none"><use href="#i-right"/></svg>'+
   '</div>'+
   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:2px 2px 0">'+
     '<div><div style="font-size:15px;font-weight:800;letter-spacing:.3px">'+hello+'，'+esc(S.user.nick)+'</div><div style="font-size:10.5px;color:var(--sub);margin-top:2px">今天也要好好照顾毛孩子哦</div></div>'+
@@ -82,11 +76,13 @@ function renderHome(){
       '<div><div class="hs-n">'+Math.round(g.mood)+'</div><div class="hs-l">心情</div></div>'+
       '<div><div class="hs-n">Lv.'+petLevel(p)+'</div><div class="hs-l">成长</div></div>'+
     '</div>'+
+    heroLive()+
   '</div>'+
-  renderLiveStrip()+
   '<div class="card" style="padding:11px 14px 4px;margin-bottom:14px">'+
-    '<div style="display:flex;gap:6px">'+SVC_TABS.map(t=>'<button class="rTab'+(homeSvcTab===t[0]?' act':'')+'" style="flex:1;padding:7px 0" onclick="homeSvcTab=\''+t[0]+'\';renderHome()">'+t[1]+'</button>').join('')+'</div>'+
-    '<div style="margin-top:2px">'+(SVC_TABS.find(t=>t[0]===homeSvcTab)||SVC_TABS[0])[2].map((it,i)=>'<div style="display:flex;align-items:center;gap:11px;padding:11px 2px;cursor:pointer;'+(i?'border-top:1px solid rgba(0,0,0,.05)':'')+'" onclick="'+it[4]+'"><div style="width:36px;height:36px;border-radius:12px;background:'+it[3]+'1c;display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:'+it[3]+'"><use href="#'+it[2]+'"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">'+it[0]+'</div><div style="font-size:10px;color:var(--sub);margin-top:1px">'+it[1]+'</div></div><svg class="icon icon-s" style="color:#C9D2DD;flex:none"><use href="#i-right"/></svg></div>').join('')+'</div>'+
+    '<div style="display:flex;align-items:center;margin-bottom:8px"><b style="font-size:13.5px">健康陪伴</b><span style="margin-left:auto;font-size:10px;color:var(--sub)">记录毛孩子的每一天</span></div>'+
+    '<div style="display:flex;align-items:baseline;gap:3px;padding:0 2px;margin-bottom:6px"><span style="font-size:13.5px;font-weight:800">今日健康</span><span style="font-size:30px;font-weight:900;line-height:1;margin-left:7px;color:var(--ink);background:linear-gradient(transparent 60%,rgba(95,182,240,.4) 60%);padding:0 3px">60</span><span style="font-size:12.5px;font-weight:800">分</span></div>'+
+    '<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#3A9C6F;background:rgba(76,168,118,.09);border-radius:10px;padding:8px 11px;margin-bottom:6px">今日您的宠物状态良好，比较健康，继续保持哦</div>'+
+    '<div>'+HOME_CARE.map((it,i)=>'<div style="display:flex;align-items:center;gap:11px;padding:11px 2px;cursor:pointer;'+(i?'border-top:1px solid rgba(0,0,0,.05)':'')+'" onclick="'+it[4]+'"><div style="width:36px;height:36px;border-radius:12px;background:'+it[3]+'1c;display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:'+it[3]+'"><use href="#'+it[2]+'"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">'+it[0]+'</div><div style="font-size:10px;color:var(--sub);margin-top:1px">'+it[1]+'</div></div><svg class="icon icon-s" style="color:#C9D2DD;flex:none"><use href="#i-right"/></svg></div>').join('')+'</div>'+
   '</div>'+
   '<div class="card" style="padding:15px 16px;margin-bottom:14px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><b style="font-size:13.5px">健康概览</b><span style="font-size:11px;color:var(--blue-d);cursor:pointer;font-weight:700" onclick="go(\'health\')">周报详情 ›</span></div>'+
@@ -98,7 +94,7 @@ function renderHome(){
     '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="chip" style="background:rgba(76,168,118,.13);color:#3A9C6B"><svg class="icon icon-s"><use href="#i-shield"/></svg>疫苗 313 天后</span><span class="chip"><svg class="icon icon-s"><use href="#i-drop"/></svg>驱虫 78 天后</span><span class="chip" style="background:rgba(232,148,90,.12);color:#E8945A">洗澡 '+rmDays('rm3')+' 天后</span></div>'+
   '</div>'+
   '<div class="card" style="padding:13px 15px;margin-bottom:14px">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:800;font-size:13.5px">今日任务 <span style="color:var(--blue-d)">'+taskDone+'/3</span></div><span style="font-size:10px;color:var(--sub)">'+(taskDone===3?'全部完成，奖励已到账':'完成可领积分')+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:800;font-size:13.5px">今日任务 <span style="color:var(--blue-d)">'+taskDone+'/3</span></div><span style="font-size:10px;color:var(--sub)">'+(taskDone===3?'全部完成，奖励已到账':'完成可领积分与家园币')+'</span></div>'+
     '<div class="statbar" style="margin-bottom:2px"><div class="statfill" style="width:'+(taskDone/3*100)+'%"></div></div>'+
     HK.map(t=>{
       const done=g.tasks[t[0]]===today();
@@ -114,7 +110,7 @@ function renderHome(){
 function rmDays(id){const r=S.reminders.find(x=>x.id===id);if(!r)return '-';const d=Math.ceil((new Date(r.next)-new Date())/864e5);return d<0?0:d}
 function quickWater(){if(!needNet())return;S.daily.push({pet:S.curPet,k:'water',v:180,ts:Date.now(),by:S.user.nick});const g=petGarden(curPet());g.tasks.water=true;g.vitality=Math.min(100,g.vitality+3);addPts(5,'快捷打卡-喝水');save();toast('已记录饮水 180ml，虚拟宠物活力+3')}
 function quickClean(){if(!needNet())return;const g=petGarden(curPet());g.clean=Math.min(100,g.clean+8);g.tasks.clean=true;w3dGain({clean:8});addPts(5,'快捷打卡-铲屎');save();toast('铲屎完成，清洁度+8，世界清洁值+8')}
-function quickFeed(){if(!needNet())return;const p=curPet(),g=petGarden(p);g.satiety=Math.min(100,g.satiety+8);if(!g.tasks.feed||g.tasks.feed!==today())g.tasks.feed=today();w3dGain({hunger:8});addPts(5,'快捷打卡-喂食');save();renderHome();toast('喂食打卡完成：'+p.name+'饱食+8，世界饥饿值+8')}
+function feed(){openWorld()}
 function openSearch(){
   openSheet('全局搜索', '<input class="input" id="gSearch" placeholder="输入关键词，聚合社区/商品/旅游" oninput="doSearch(this.value)"><div id="gSearchRes" style="margin-top:12px;font-size:12px;color:var(--sub)">支持搜索社区帖子、商城商品、携宠目的地</div>');
 }
@@ -126,7 +122,6 @@ function doSearch(kw){
   const dests=S.dests.filter(d=>(d.name+d.city+d.txt).includes(kw)).slice(0,5).map(d=>'<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05);font-size:13px;cursor:pointer" onclick="closeSheet();go(\'travel\')"><svg class="icon icon-s" style="vertical-align:-3px;color:#5B8DEF"><use href="#i-pin"/></svg> '+esc(d.name)+'</div>').join('');
   $('gSearchRes').innerHTML='<div style="margin:8px 0 4px;font-weight:700;font-size:12px">社区</div>'+(posts||'<div style="color:#B4BDC8;font-size:12px;padding:4px 0">无结果</div>')+'<div style="margin:10px 0 4px;font-weight:700;font-size:12px">商品</div>'+(prods||'<div style="color:#B4BDC8;font-size:12px;padding:4px 0">无结果</div>')+'<div style="margin:10px 0 4px;font-weight:700;font-size:12px">旅游</div>'+(dests||'<div style="color:#B4BDC8;font-size:12px;padding:4px 0">无结果</div>');
 }
-
 
 /* ============ 健康数据打卡（M4） ============ */
 function quickAdd(k,v){

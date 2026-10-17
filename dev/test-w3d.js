@@ -70,7 +70,7 @@ const exportTail = `
 ;globalThis.X={
   getS:()=>S, setS:(v)=>{S=v}, $,
   worldPet,worldLevel,addWorldGrowth,payAndGain,canPay,checkWorldEvents,settleVenue,buyGood,attrDeltaTxt,neg,
-  settleWorld,w3dNeedRotate,w3dAct,w3dGain,quickFeed,quickClean,worldEnter,w3dEnter,
+  settleWorld,w3dNeedRotate,w3dAct,w3dGain,feed,quickClean,worldEnter,w3dEnter,
   WCOURSES,WJOBS,WGOODS,WVENUES,WEVENTS,WMEDALS,WSPORT_UNLOCK_LV,MAIN,tabTo,petGarden,curPet,today,
   W3D_MODELS,W3D_SPOTS
 };`;
@@ -254,10 +254,7 @@ grp('I. 快捷打卡联动世界属性');
 {
   const w = X.worldPet(), g = X.petGarden(X.curPet());
   w.attr.hunger = 50; w.attr.clean = 50; g.satiety = 50; g.clean = 50; g.tasks = {};
-  X.quickFeed();
-  eq(w.attr.hunger, 58, '喂食打卡 → 世界饥饿+8');
-  eq(g.satiety, 58, '喂食打卡 → 家园饱食+8');
-  eq(g.tasks.feed, X.today(), '喂食打卡标记任务');
+  ok(typeof X.feed === 'function' && X.feed.toString().includes('openWorld'), '喂食入口 feed() → openWorld()（跳转 3D 宠物世界）');
   X.quickClean();
   eq(w.attr.clean, 58, '铲屎打卡 → 世界清洁+8');
   eq(g.clean, 58, '铲屎打卡 → 家园清洁+8');

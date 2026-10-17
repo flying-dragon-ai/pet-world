@@ -9,7 +9,7 @@ function renderCommunity(){
   (posts.length?posts.map(po=>{
     const liked=S.myLikes[po.id],faved=S.myFavs[po.id];
     return '<div class="card chov record-item" style="padding:15px 16px;margin-bottom:12px">'+
-    '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px;cursor:pointer" onclick="openUserHome(\''+po.auth+'\')"><div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex:none"><img src="'+po.authImg+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)"></div><div><div style="font-size:12.5px;font-weight:700">'+po.auth+'</div><div style="font-size:10px;color:var(--sub)">'+fmtTs(po.time)+' · '+po.zone+'</div></div><span style="margin-left:auto;cursor:pointer;color:#9AA9BC" onclick="event.stopPropagation();postMore(\''+po.id+'\')"><svg class="icon icon-s"><use href="#i-more"/></svg></span></div>'+
+    '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px;cursor:pointer" onclick="openUserHome(\''+po.auth+'\')"><div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex:none"><img src="'+po.authImg+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)"></div><div><div style="font-size:12.5px;font-weight:700">'+po.auth+'</div><div style="font-size:10px;color:var(--sub)">'+fmtTs(po.time)+' · '+po.zone+' · IP属地：'+esc(po.ip||'北京')+'</div></div><span style="margin-left:auto;cursor:pointer;color:#9AA9BC" onclick="event.stopPropagation();postMore(\''+po.id+'\')"><svg class="icon icon-s"><use href="#i-more"/></svg></span></div>'+
     '<div style="font-size:14.5px;font-weight:800;margin-bottom:5px;cursor:pointer" onclick="openPost(\''+po.id+'\')">'+esc(po.title)+'</div>'+
     '<div style="font-size:12.5px;color:#666;line-height:1.55;margin-bottom:9px">'+esc(po.txt)+'</div>'+
     '<div style="position:relative;height:150px;border-radius:14px;overflow:hidden;margin-bottom:10px;cursor:pointer" onclick="openPost(\''+po.id+'\')"><img src="'+po.img+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)">'+(po.media==='视频'?'<span class="vplay"><svg class="icon icon-s" style="color:#fff;margin-left:2px"><use href="#i-play"/></svg></span><span class="vdur">'+(po.dur||'00:45')+'</span>':'')+'</div>'+
@@ -64,7 +64,7 @@ function readNotif(id){
 }
 function simNotif(){
   const mine=S.posts.find(p=>p.auth===S.user.nick);
-  const U=[['小鱼干','https://images.unsplash.com/photo-1517841905240-472988babdf9?w=80&h=80&fit=crop'],['年糕妈','https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=80&h=80&fit=crop'],['遛狗冠军','https://images.unsplash.com/photo-1600275669439-14e40452d20b?w=80&h=80&fit=crop']];
+  const U=[['小鱼干','https://images.unsplash.com/photo-1517841905240-472988babdf9?w=80&h=80&fit=crop'],['尖尖妈','https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=80&h=80&fit=crop'],['遛狗冠军','https://images.unsplash.com/photo-1600275669439-14e40452d20b?w=80&h=80&fit=crop']];
   const u=U[Math.floor(Math.random()*U.length)];
   let n;
   if(mine){
@@ -91,7 +91,8 @@ function openUserHome(name){
   '<div style="text-align:center;padding:6px 0 14px">'+
   '<div style="width:64px;height:64px;border-radius:50%;margin:0 auto 8px;overflow:hidden"><img src="'+img+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)"></div>'+
   '<div style="font-weight:800">'+esc(un)+(mine?' <span class="chip" style="font-size:9px">我</span>':'')+'</div>'+
-  '<div style="font-size:11px;color:var(--sub);margin:3px 0 10px">'+(mine?'养宠 3 年 · '+S.pets.length+' 只宠物 · 认证铲屎官':(ups.length?esc(ups[0].zone)+' · 认证铲屎官':'社区成员'))+'</div>'+
+  '<div style="font-size:11px;color:var(--sub);margin:3px 0 2px">'+(mine?'养宠 3 年 · '+S.pets.length+' 只宠物 · 认证铲屎官':(ups.length?esc(ups[0].zone)+' · 认证铲屎官':'社区成员'))+'</div>'+
+  '<div style="font-size:10px;color:#A8B2BE;margin-bottom:8px">IP属地：'+(mine?esc(S.user.ip||'北京'):esc(ups.length?(ups[0].ip||'北京'):'北京'))+'</div>'+
   '<div style="display:flex;justify-content:center;gap:24px;font-size:11.5px;color:var(--sub)"><span><b style="color:var(--ink);font-size:15px">'+ups.length+'</b><br>帖子</span><span><b style="color:var(--ink);font-size:15px">'+(mine?96:'2.4k')+'</b><br>粉丝</span><span><b style="color:var(--ink);font-size:15px">'+(mine?32:56)+'</b><br>关注</span></div>'+
   (mine?'':'<button class="btn" style="margin-top:14px" onclick="toast(\'已关注 '+esc(un)+'，后续动态将推送给你\')">+ 关注</button>')+
   '</div>'+
@@ -107,7 +108,7 @@ function openPost(id){
   const liked=S.myLikes[id],faved=S.myFavs[id];
   const rc=window._replyCmt&&window._replyCmt.pid===id?window._replyCmt:null;
   openSheet('帖子详情',
-  '<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;cursor:pointer" onclick="closeSheet();openUserHome(\''+po.auth+'\')"><div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex:none"><img src="'+po.authImg+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)"></div><div><div style="font-size:12.5px;font-weight:700">'+po.auth+'</div><div style="font-size:10px;color:var(--sub)">'+fmtTs(po.time)+' · '+po.zone+'</div></div></div>'+
+  '<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;cursor:pointer" onclick="closeSheet();openUserHome(\''+po.auth+'\')"><div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex:none"><img src="'+po.authImg+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)"></div><div><div style="font-size:12.5px;font-weight:700">'+po.auth+'</div><div style="font-size:10px;color:var(--sub)">'+fmtTs(po.time)+' · '+po.zone+' · IP属地：'+esc(po.ip||'北京')+'</div></div></div>'+
   '<div style="font-size:15px;font-weight:800;margin-bottom:6px">'+esc(po.title)+'</div>'+
   '<div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:10px">'+esc(po.txt)+'</div>'+
   '<div style="height:160px;border-radius:14px;overflow:hidden;margin-bottom:14px;position:relative"><img src="'+po.img+'" style="width:100%;height:100%;object-fit:cover" onerror="imgErr(this)">'+(po.media==='视频'?'<span class="vplay" style="width:46px;height:46px"><svg class="icon" style="width:18px;height:18px;color:#fff;margin-left:3px"><use href="#i-play"/></svg></span><span class="vdur" style="font-size:10px">'+(po.dur||'00:45')+'</span><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,.85);padding-top:60px">点击播放（演示视频）</div>':'')+'</div>'+
@@ -202,7 +203,7 @@ function pubSubmit(){
   if(!t||!x){toast('标题和正文都要填哦');return}
   if(pubMedia!=='文字'&&!pubImg){toast(pubMedia==='视频'?'请选择一段示例视频':'请至少选择一张配图');return}
   if(!needNet())return;
-  S.posts.unshift({id:uid(),zone:pubZone||'推荐',auth:S.user.nick,authImg:S.user.avatar,time:Date.now(),title:t,txt:x,img:pubImg||(pubMedia==='视频'?'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600&h=400&fit=crop':'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&h=400&fit=crop'),likes:0,cmts:[],favs:0,media:pubMedia,dur:window._pubDur||'00:45'});
+  S.posts.unshift({id:uid(),zone:pubZone||'推荐',auth:S.user.nick,authImg:S.user.avatar,time:Date.now(),title:t,txt:x,img:pubImg||(pubMedia==='视频'?'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=600&h=400&fit=crop':'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600&h=400&fit=crop'),likes:0,cmts:[],favs:0,media:pubMedia,dur:window._pubDur||'00:45',ip:S.user.ip||'北京'});
   addPts(20,'社区发帖');addWorldGrowth(10,'社区发帖');save();pubImg='';pubVid=false;window._pubDur='00:45';
   toast('审核通过，发布成功（+20积分 · 成长值+10）');
   comZone='推荐';go('community');

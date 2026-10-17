@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>宠物数字管家 V1.8 - 3D宠物世界版</title>
+<title>宠物数字管家 V1.8.1 - 3D宠物世界版</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="assets/js/vendor/three.min.js"></script>
@@ -105,7 +105,7 @@
         <span>已阅读并同意 <b style="color:var(--blue-d)">《用户协议》</b> 与 <b style="color:var(--blue-d)">《隐私政策》</b>，并同意隐私弹窗前置要求</span>
       </label>
       <div style="flex:1"></div>
-      <div style="text-align:center;font-size:10.5px;color:#BCC5D0;padding-bottom:8px">宠物数字管家 · 正式版 V1.7.0</div>
+      <div style="text-align:center;font-size:10.5px;color:#BCC5D0;padding-bottom:8px">宠物数字管家 · 正式版 V1.7.4</div>
     </div>
   </section>
 
@@ -128,6 +128,9 @@
   <section class="page" id="pg-publish" style="padding:0"><div id="publish-body"></div></section>
   <section class="page" id="pg-travel"><div id="travel-body" style="padding:12px 16px 0"></div></section>
   <section class="page" id="pg-act"><div id="act-body" style="padding:12px 16px 0"></div></section>
+  <section class="page" id="pg-menu"><div id="menu-body" style="padding:12px 16px 0"></div></section>
+  <section class="page" id="pg-care"><div id="care-body" style="padding:12px 16px 0"></div></section>
+  <section class="page" id="pg-rescue"><div id="rescue-body" style="padding:12px 16px 0"></div></section>
   <section class="page" id="pg-points"><div id="points-body" style="padding:12px 16px 0"></div></section>
   <section class="page" id="pg-settings" style="padding:0"><div id="settings-body"></div></section>
   <!-- V1.7 虚拟人宠世界 -->
@@ -145,8 +148,8 @@
 
   <nav class="tabbar hidden" id="tabbar">
     <button class="tbtn act" data-tab="home" onclick="tabTo('home')"><svg class="icon"><use href="#i-home"/></svg><span>首页</span></button>
-    <button class="tbtn" onclick="openWorld()"><svg class="icon"><use href="#i-paw"/></svg><span>世界</span></button>
-    <button class="ai-center" onclick="tabTo('ai')"><svg class="icon" style="width:26px;height:26px"><use href="#i-spark"/></svg></button>
+    <button class="tbtn" data-tab="menu" onclick="tabTo('menu')"><svg class="icon"><use href="#i-spark"/></svg><span>菜单</span></button>
+    <button class="ai-center" id="btnCenter" title="人宠世界" onclick="openWorld()"><svg class="icon" style="width:26px;height:26px"><use href="#i-paw"/></svg></button>
     <button class="tbtn" data-tab="community" onclick="tabTo('community')"><svg class="icon"><use href="#i-compass"/></svg><span>社区</span></button>
     <button class="tbtn" data-tab="me" onclick="tabTo('me')"><svg class="icon"><use href="#i-user"/></svg><span>我的</span></button>
   </nav>
@@ -174,6 +177,7 @@
   <div class="sheet" id="sheet"><div class="sheet-h" id="sheetTitle"></div><div class="sheet-b" id="sheetBody"></div></div>
   <div class="modal-wrap" id="modalWrap"><div class="modal" id="modalBox"></div></div>
 </div>
+
 
 <!-- V1.8 3D 宠物世界：横屏全屏舞台（脱离手机框，竖屏视口时内容旋转90°恒为横屏） -->
 <div id="w3dStage">
@@ -211,10 +215,14 @@
 <script src="assets/js/11-ai.js"></script>
 <script src="assets/js/12-community.js"></script>
 <script src="assets/js/13-me-profile.js"></script>
-<script src="assets/js/14-monitor.js"></script>
-<script src="assets/js/15-mall.js"></script>
-<script src="assets/js/16-misc.js"></script>
-<script src="assets/js/17-live.js"></script>
+<script src="assets/js/14-grow.js"></script>
+<script src="assets/js/15-monitor.js"></script>
+<script src="assets/js/16-mall.js"></script>
+<script src="assets/js/17-misc.js"></script>
+<script src="assets/js/18-service.js"></script>
+<script src="assets/js/19-act.js"></script>
+<script src="assets/js/21-petwiz.js"></script>
+<script src="assets/js/22-live.js"></script>
 <script src="assets/js/20-world.js"></script>
 <script src="assets/js/30-w3d.js"></script>
 <script src="assets/js/99-boot.js"></script>
