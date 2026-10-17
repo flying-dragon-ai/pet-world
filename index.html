@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>宠物数字管家 V1.8 - 3D宠物世界版</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="assets/js/vendor/three.min.js"></script>
+<script src="assets/js/vendor/GLTFLoader.js"></script>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden">
+<defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
+<symbol id="i-paw" viewBox="0 0 24 24"><circle cx="6.5" cy="9" r="2"/><circle cx="12" cy="6.5" r="2"/><circle cx="17.5" cy="9" r="2"/><path d="M12 11.5c-3.2 0-5.5 2.6-5.5 5.3a2.8 2.8 0 0 0 2.8 2.8c1 0 1.8-.5 2.7-.5s1.7.5 2.7.5a2.8 2.8 0 0 0 2.8-2.8c0-2.7-2.3-5.3-5.5-5.3z"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></symbol>
+<symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16.2 7.8l-2.1 6.3-6.3 2.1 2.1-6.3z"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+<symbol id="i-right" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.2l7.8-7.8 1.1-1.1a5.5 5.5 0 0 0-.1-7.7z"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></symbol>
+<symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+<symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+<symbol id="i-set" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+<symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5l1.2 2.6 2.8.3-2.1 1.9.6 2.7-2.5-1.4-2.5 1.4.6-2.7-2.1-1.9 2.8-.3z"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></symbol>
+<symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+<symbol id="i-gift" viewBox="0 0 24 24"><path d="M20 12v10H4V12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></symbol>
+<symbol id="i-video" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></symbol>
+<symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9z"/></symbol>
+<symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 2.7l5.7 5.6a8 8 0 1 1-11.4 0z"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></symbol>
+<symbol id="i-img" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol>
+<symbol id="i-med" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></symbol>
+<symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 21A7 7 0 0 1 4 14C4 8 9 4 20 4c0 11-4 12-9 17z"/><path d="M5 21c3-5 7-8 11-10"/></symbol>
+<symbol id="i-bowl" viewBox="0 0 24 24"><path d="M4 12h16a8 8 0 0 1-16 0z"/><path d="M8 12V9a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 2L1 21h22z"/><path d="M12 9v5"/><path d="M12 17.2v.6"/></symbol>
+<symbol id="i-dl" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></symbol>
+<symbol id="i-max" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></symbol>
+</defs>
+</svg>
+
+<div class="bg-blob" style="width:420px;height:420px;background:#8FB6EE;top:-120px;left:calc(50% - 520px)"></div>
+<div class="bg-blob" style="width:380px;height:380px;background:#E8C9A0;bottom:-100px;left:calc(50% + 160px);animation-delay:3s"></div>
+<div class="bg-blob" style="width:300px;height:300px;background:#B9A6E8;top:40%;left:calc(50% + 380px);animation-delay:6s"></div>
+
+<div class="phone" id="phone">
+  <div class="statusbar"><span id="sbTime">9:41</span><span style="display:flex;gap:6px;align-items:center"><svg class="icon icon-s"><use href="#i-shield"/></svg><svg class="icon icon-s"><use href="#i-bell"/></svg></span></div>
+  <div class="offlineBan" id="offlineBan"><svg class="icon icon-s"><use href="#i-alert"/></svg><span>网络连接不可用，部分功能暂不可用</span></div>
+
+  <!-- 登录页 -->
+  <section class="page" id="pg-login" style="padding-bottom:0">
+    <div style="padding:46px 30px 20px;display:flex;flex-direction:column;height:100%">
+      <div style="text-align:center;margin-bottom:34px" class="fadeUp">
+        <div style="width:84px;height:84px;margin:0 auto 16px;border-radius:28px;background:linear-gradient(135deg,#6FA6F0,#3A7BD5);display:flex;align-items:center;justify-content:center;box-shadow:0 16px 36px rgba(58,123,213,.4)">
+          <svg class="icon" style="width:42px;height:42px;color:#fff"><use href="#i-paw"/></svg>
+        </div>
+        <div style="font-size:26px;font-weight:900;letter-spacing:1px">宠物数字管家</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:6px">真实宠物数字化 · AI 养宠顾问 · 线上情感陪伴</div>
+      </div>
+      <div class="card fadeUp" style="padding:22px 20px;animation-delay:.1s">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <span class="chip" style="padding:8px 13px;font-size:13px">+86</span>
+          <input class="input" id="lgPhone" maxlength="11" inputmode="numeric" placeholder="请输入手机号" oninput="lgPhoneIn()">
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px" id="codeRow">
+          <input class="input" id="lgCode" maxlength="6" inputmode="numeric" placeholder="请输入验证码">
+          <button class="btn btn-sm btn-ghost" id="btnSend" style="white-space:nowrap" onclick="sendCode()">获取验证码</button>
+        </div>
+        <div style="font-size:11px;color:#A8B2BE;margin:2px 0 12px 4px" id="codeHint">验证码 5 分钟内有效 · 演示万能码 888888</div>
+        <button class="btn" id="btnLogin" onclick="doLogin()">登录 / 注册</button>
+        <div style="display:flex;align-items:center;gap:8px;margin:16px 0 12px">
+          <div style="height:1px;flex:1;background:rgba(0,0,0,.07)"></div><span style="font-size:11px;color:#B4BDC8">其他方式</span><div style="height:1px;flex:1;background:rgba(0,0,0,.07)"></div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost" style="font-size:12.5px;padding:10px 0" onclick="guestLogin()"><svg class="icon icon-s"><use href="#i-user"/></svg>一键体验</button>
+          <button class="btn btn-ghost" style="font-size:12.5px;padding:10px 0" onclick="toast('演示版：微信授权模拟')"><svg class="icon icon-s"><use href="#i-share"/></svg>微信登录</button>
+        </div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:11.5px;color:var(--sub);margin-top:18px;cursor:pointer">
+        <input type="checkbox" id="lgAgree" style="margin-top:2px;accent-color:var(--blue-d)" checked>
+        <span>已阅读并同意 <b style="color:var(--blue-d)">《用户协议》</b> 与 <b style="color:var(--blue-d)">《隐私政策》</b>，并同意隐私弹窗前置要求</span>
+      </label>
+      <div style="flex:1"></div>
+      <div style="text-align:center;font-size:10.5px;color:#BCC5D0;padding-bottom:8px">宠物数字管家 · 正式版 V1.7.0</div>
+    </div>
+  </section>
+
+  <!-- 主Tab页 -->
+  <section class="page" id="pg-home"><div id="home-body" style="padding:14px 16px 0"></div></section>
+  <section class="page" id="pg-ai" style="padding:0"><div id="ai-body" style="height:100%;display:flex;flex-direction:column"></div></section>
+  <section class="page" id="pg-community"><div id="community-body" style="padding:12px 16px 0"></div></section>
+  <section class="page" id="pg-me"><div id="me-body" style="padding:14px 16px 0"></div></section>
+
+  <!-- 子页面 -->
+  <section class="page" id="pg-profile" style="padding:0"><div id="profile-body"></div></section>
+  <section class="page" id="pg-petedit" style="padding:0"><div id="petedit-body"></div></section>
+  <section class="page" id="pg-health" style="padding:0"><div id="health-body"></div></section>
+  <section class="page" id="pg-monitor" style="padding:0"><div id="monitor-body"></div></section>
+  <section class="page" id="pg-mall"><div id="mall-body" style="padding:12px 16px 0"></div></section>
+  <section class="page" id="pg-malldetail" style="padding:0"><div id="malldetail-body"></div></section>
+  <section class="page" id="pg-cart" style="padding:0"><div id="cart-body"></div></section>
+  <section class="page" id="pg-orders" style="padding:0"><div id="orders-body"></div></section>
+  <section class="page" id="pg-messages"><div id="messages-body" style="padding:12px 16px 0"></div></section>
+  <section class="page" id="pg-publish" style="padding:0"><div id="publish-body"></div></section>
+  <section class="page" id="pg-travel"><div id="travel-body" style="padding:12px 16px 0"></div></section>
+  <section class="page" id="pg-act"><div id="act-body" style="padding:12px 16px 0"></div></section>
+  <section class="page" id="pg-points"><div id="points-body" style="padding:12px 16px 0"></div></section>
+  <section class="page" id="pg-settings" style="padding:0"><div id="settings-body"></div></section>
+  <!-- V1.7 虚拟人宠世界 -->
+  <section class="page" id="pg-world" style="padding:12px 16px 0"><div id="world-body"></div></section>
+  <!-- V1.7 进入游戏加载进度条 -->
+  <div class="world-load" id="worldLoad">
+    <div style="width:96px;height:96px;border-radius:30px;background:linear-gradient(135deg,#8FB6EE,#3A7BD5);display:flex;align-items:center;justify-content:center;box-shadow:0 18px 44px rgba(58,123,213,.4);animation:wlBounce 1.2s ease-in-out infinite">
+      <svg class="icon" style="width:46px;height:46px;color:#fff"><use href="#i-paw"/></svg>
+    </div>
+    <div style="font-size:17px;font-weight:900;margin-top:20px;letter-spacing:1px">虚拟人宠世界</div>
+    <div id="wlTip" style="font-size:11.5px;color:var(--sub);margin-top:6px">正在载入「<span id="wlPetName"></span>」的小院…</div>
+    <div class="wl-bar"><div class="wl-fill" id="wlFill"></div></div>
+    <div id="wlPct" style="font-size:12px;font-weight:800;color:var(--blue-d);margin-top:6px">0%</div>
+  </div>
+
+  <nav class="tabbar hidden" id="tabbar">
+    <button class="tbtn act" data-tab="home" onclick="tabTo('home')"><svg class="icon"><use href="#i-home"/></svg><span>首页</span></button>
+    <button class="tbtn" onclick="openWorld()"><svg class="icon"><use href="#i-paw"/></svg><span>世界</span></button>
+    <button class="ai-center" onclick="tabTo('ai')"><svg class="icon" style="width:26px;height:26px"><use href="#i-spark"/></svg></button>
+    <button class="tbtn" data-tab="community" onclick="tabTo('community')"><svg class="icon"><use href="#i-compass"/></svg><span>社区</span></button>
+    <button class="tbtn" data-tab="me" onclick="tabTo('me')"><svg class="icon"><use href="#i-user"/></svg><span>我的</span></button>
+  </nav>
+
+  <!-- 新手导览 -->
+  <div class="onb" id="onb">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+      <div id="onbArt" style="width:150px;height:150px;border-radius:44px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#8FB6EE,#3A7BD5);box-shadow:0 18px 44px rgba(58,123,213,.35);color:#fff">
+        <svg style="width:70px;height:70px;stroke:#fff;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"><use href="#i-spark"/></svg>
+      </div>
+      <div id="onbT" style="font-size:24px;font-weight:900;margin-top:30px">AI 全场景养宠顾问</div>
+      <div id="onbD" style="font-size:13.5px;color:var(--sub);margin-top:12px;line-height:1.7;max-width:260px">九大场景随问随答，档案上下文注入，回答贴合你家宠物的真实情况</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:22px" id="onbDots">
+      <span class="onb-dot act"></span><span class="onb-dot"></span><span class="onb-dot"></span>
+    </div>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-ghost" onclick="finOnb()">跳过</button>
+      <button class="btn" id="onbNext" onclick="onbNext()">下一步</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="mask" id="mask" onclick="closeSheet()"></div>
+  <div class="sheet" id="sheet"><div class="sheet-h" id="sheetTitle"></div><div class="sheet-b" id="sheetBody"></div></div>
+  <div class="modal-wrap" id="modalWrap"><div class="modal" id="modalBox"></div></div>
+</div>
+
+<!-- V1.8 3D 宠物世界：横屏全屏舞台（脱离手机框，竖屏视口时内容旋转90°恒为横屏） -->
+<div id="w3dStage">
+  <div id="w3dBox">
+    <div id="w3dGL"></div>
+    <div id="w3dHudTop">
+      <button id="w3dBack" onclick="w3dExit()">‹ 返回</button>
+      <div id="w3dStats"></div>
+      <div id="w3dCoin">🪙 0</div>
+    </div>
+    <div id="w3dTip">📱 旋转手机，横屏效果更佳</div>
+    <div id="w3dBubble"></div>
+    <div id="w3dFx"></div>
+    <div id="w3dToast"></div>
+    <div id="w3dFall">
+      <div style="font-size:44px">🐾</div>
+      <div style="font-size:17px;font-weight:900">3D 世界暂时进不去</div>
+      <div class="w3d-fall-t" style="font-size:12px;opacity:.75;line-height:1.8">当前环境不支持 WebGL 或 3D 引擎未加载</div>
+      <button class="btn" style="width:auto;padding:10px 26px" onclick="w3dExit()">返回首页</button>
+    </div>
+    <div id="w3dHudBottom">
+      <button class="w3d-act" data-act="touch" onclick="w3dAct('touch')"><span>🤚</span>抚摸</button>
+      <button class="w3d-act" data-act="feed" onclick="w3dAct('feed')"><span>🐟</span>喂食</button>
+      <button class="w3d-act" data-act="play" onclick="w3dAct('play')"><span>🎾</span>玩耍</button>
+      <button class="w3d-act" data-act="bath" onclick="w3dAct('bath')"><span>🛁</span>洗澡</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/00-utils.js"></script>
+<script src="assets/js/01-data.js"></script>
+<script src="assets/js/02-core.js"></script>
+<script src="assets/js/03-petsvg.js"></script>
+<script src="assets/js/10-home.js"></script>
+<script src="assets/js/11-ai.js"></script>
+<script src="assets/js/12-community.js"></script>
+<script src="assets/js/13-me-profile.js"></script>
+<script src="assets/js/14-monitor.js"></script>
+<script src="assets/js/15-mall.js"></script>
+<script src="assets/js/16-misc.js"></script>
+<script src="assets/js/17-live.js"></script>
+<script src="assets/js/20-world.js"></script>
+<script src="assets/js/30-w3d.js"></script>
+<script src="assets/js/99-boot.js"></script>
+</body>
+</html>
