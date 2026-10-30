@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>宠物数字管家 V1.8.1 - 3D宠物世界版</title>
+<title>宠物数字管家 V1.9.0 - 3D宠物世界版</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="assets/js/vendor/three.min.js"></script>
@@ -84,20 +84,20 @@
       <div class="card fadeUp" style="padding:22px 20px;animation-delay:.1s">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
           <span class="chip" style="padding:8px 13px;font-size:13px">+86</span>
-          <input class="input" id="lgPhone" maxlength="11" inputmode="numeric" placeholder="请输入手机号" oninput="lgPhoneIn()">
+          <input class="input" id="lgPhone" maxlength="11" inputmode="numeric" placeholder="请输入手机号" oninput="app.lgPhoneIn()">
         </div>
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px" id="codeRow">
           <input class="input" id="lgCode" maxlength="6" inputmode="numeric" placeholder="请输入验证码">
-          <button class="btn btn-sm btn-ghost" id="btnSend" style="white-space:nowrap" onclick="sendCode()">获取验证码</button>
+          <button class="btn btn-sm btn-ghost" id="btnSend" style="white-space:nowrap" onclick="app.sendCode()">获取验证码</button>
         </div>
         <div style="font-size:11px;color:#A8B2BE;margin:2px 0 12px 4px" id="codeHint">验证码 5 分钟内有效 · 演示万能码 888888</div>
-        <button class="btn" id="btnLogin" onclick="doLogin()">登录 / 注册</button>
+        <button class="btn" id="btnLogin" onclick="app.doLogin()">登录 / 注册</button>
         <div style="display:flex;align-items:center;gap:8px;margin:16px 0 12px">
           <div style="height:1px;flex:1;background:rgba(0,0,0,.07)"></div><span style="font-size:11px;color:#B4BDC8">其他方式</span><div style="height:1px;flex:1;background:rgba(0,0,0,.07)"></div>
         </div>
         <div style="display:flex;gap:10px">
-          <button class="btn btn-ghost" style="font-size:12.5px;padding:10px 0" onclick="guestLogin()"><svg class="icon icon-s"><use href="#i-user"/></svg>一键体验</button>
-          <button class="btn btn-ghost" style="font-size:12.5px;padding:10px 0" onclick="toast('演示版：微信授权模拟')"><svg class="icon icon-s"><use href="#i-share"/></svg>微信登录</button>
+          <button class="btn btn-ghost" style="font-size:12.5px;padding:10px 0" onclick="app.guestLogin()"><svg class="icon icon-s"><use href="#i-user"/></svg>一键体验</button>
+          <button class="btn btn-ghost" style="font-size:12.5px;padding:10px 0" onclick="app.toast('演示版：微信授权模拟')"><svg class="icon icon-s"><use href="#i-share"/></svg>微信登录</button>
         </div>
       </div>
       <label style="display:flex;gap:8px;align-items:flex-start;font-size:11.5px;color:var(--sub);margin-top:18px;cursor:pointer">
@@ -105,7 +105,7 @@
         <span>已阅读并同意 <b style="color:var(--blue-d)">《用户协议》</b> 与 <b style="color:var(--blue-d)">《隐私政策》</b>，并同意隐私弹窗前置要求</span>
       </label>
       <div style="flex:1"></div>
-      <div style="text-align:center;font-size:10.5px;color:#BCC5D0;padding-bottom:8px">宠物数字管家 · 正式版 V1.7.4</div>
+      <div style="text-align:center;font-size:10.5px;color:#BCC5D0;padding-bottom:8px">宠物数字管家 · 正式版 V1.9.0</div>
     </div>
   </section>
 
@@ -147,11 +147,11 @@
   </div>
 
   <nav class="tabbar hidden" id="tabbar">
-    <button class="tbtn act" data-tab="home" onclick="tabTo('home')"><svg class="icon"><use href="#i-home"/></svg><span>首页</span></button>
-    <button class="tbtn" data-tab="menu" onclick="tabTo('menu')"><svg class="icon"><use href="#i-spark"/></svg><span>菜单</span></button>
-    <button class="ai-center" id="btnCenter" title="人宠世界" onclick="openWorld()"><svg class="icon" style="width:26px;height:26px"><use href="#i-paw"/></svg></button>
-    <button class="tbtn" data-tab="community" onclick="tabTo('community')"><svg class="icon"><use href="#i-compass"/></svg><span>社区</span></button>
-    <button class="tbtn" data-tab="me" onclick="tabTo('me')"><svg class="icon"><use href="#i-user"/></svg><span>我的</span></button>
+    <button class="tbtn act" data-tab="home" onclick="app.tabTo('home')"><svg class="icon"><use href="#i-home"/></svg><span>首页</span></button>
+    <button class="tbtn" data-tab="menu" onclick="app.tabTo('menu')"><svg class="icon"><use href="#i-spark"/></svg><span>菜单</span></button>
+    <button class="ai-center" id="btnCenter" title="人宠世界" onclick="app.openWorld()"><svg class="icon" style="width:26px;height:26px"><use href="#i-paw"/></svg></button>
+    <button class="tbtn" data-tab="community" onclick="app.tabTo('community')"><svg class="icon"><use href="#i-compass"/></svg><span>社区</span></button>
+    <button class="tbtn" data-tab="me" onclick="app.tabTo('me')"><svg class="icon"><use href="#i-user"/></svg><span>我的</span></button>
   </nav>
 
   <!-- 新手导览 -->
@@ -167,13 +167,13 @@
       <span class="onb-dot act"></span><span class="onb-dot"></span><span class="onb-dot"></span>
     </div>
     <div style="display:flex;gap:12px">
-      <button class="btn btn-ghost" onclick="finOnb()">跳过</button>
-      <button class="btn" id="onbNext" onclick="onbNext()">下一步</button>
+      <button class="btn btn-ghost" onclick="app.finOnb()">跳过</button>
+      <button class="btn" id="onbNext" onclick="app.onbNext()">下一步</button>
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
-  <div class="mask" id="mask" onclick="closeSheet()"></div>
+  <div class="mask" id="mask" onclick="app.closeSheet()"></div>
   <div class="sheet" id="sheet"><div class="sheet-h" id="sheetTitle"></div><div class="sheet-b" id="sheetBody"></div></div>
   <div class="modal-wrap" id="modalWrap"><div class="modal" id="modalBox"></div></div>
 </div>
@@ -184,7 +184,7 @@
   <div id="w3dBox">
     <div id="w3dGL"></div>
     <div id="w3dHudTop">
-      <button id="w3dBack" onclick="w3dExit()">‹ 返回</button>
+      <button id="w3dBack" onclick="app.w3dExit()">‹ 返回</button>
       <div id="w3dStats"></div>
       <div id="w3dCoin">🪙 0</div>
     </div>
@@ -196,35 +196,17 @@
       <div style="font-size:44px">🐾</div>
       <div style="font-size:17px;font-weight:900">3D 世界暂时进不去</div>
       <div class="w3d-fall-t" style="font-size:12px;opacity:.75;line-height:1.8">当前环境不支持 WebGL 或 3D 引擎未加载</div>
-      <button class="btn" style="width:auto;padding:10px 26px" onclick="w3dExit()">返回首页</button>
+      <button class="btn" style="width:auto;padding:10px 26px" onclick="app.w3dExit()">返回首页</button>
     </div>
     <div id="w3dHudBottom">
-      <button class="w3d-act" data-act="touch" onclick="w3dAct('touch')"><span>🤚</span>抚摸</button>
-      <button class="w3d-act" data-act="feed" onclick="w3dAct('feed')"><span>🐟</span>喂食</button>
-      <button class="w3d-act" data-act="play" onclick="w3dAct('play')"><span>🎾</span>玩耍</button>
-      <button class="w3d-act" data-act="bath" onclick="w3dAct('bath')"><span>🛁</span>洗澡</button>
+      <button class="w3d-act" data-act="touch" onclick="app.w3dAct('touch')"><span>🤚</span>抚摸</button>
+      <button class="w3d-act" data-act="feed" onclick="app.w3dAct('feed')"><span>🐟</span>喂食</button>
+      <button class="w3d-act" data-act="play" onclick="app.w3dAct('play')"><span>🎾</span>玩耍</button>
+      <button class="w3d-act" data-act="bath" onclick="app.w3dAct('bath')"><span>🛁</span>洗澡</button>
     </div>
   </div>
 </div>
 
-<script src="assets/js/00-utils.js"></script>
-<script src="assets/js/01-data.js"></script>
-<script src="assets/js/02-core.js"></script>
-<script src="assets/js/03-petsvg.js"></script>
-<script src="assets/js/10-home.js"></script>
-<script src="assets/js/11-ai.js"></script>
-<script src="assets/js/12-community.js"></script>
-<script src="assets/js/13-me-profile.js"></script>
-<script src="assets/js/14-grow.js"></script>
-<script src="assets/js/15-monitor.js"></script>
-<script src="assets/js/16-mall.js"></script>
-<script src="assets/js/17-misc.js"></script>
-<script src="assets/js/18-service.js"></script>
-<script src="assets/js/19-act.js"></script>
-<script src="assets/js/21-petwiz.js"></script>
-<script src="assets/js/22-live.js"></script>
-<script src="assets/js/20-world.js"></script>
-<script src="assets/js/30-w3d.js"></script>
-<script src="assets/js/99-boot.js"></script>
+<script type="module" src="src/main.js"></script>
 </body>
 </html>

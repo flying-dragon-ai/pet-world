@@ -1,5 +1,5 @@
 serve.log
-_smoke/
 node_modules/
+dist/
 .DS_Store
 Thumbs.db
