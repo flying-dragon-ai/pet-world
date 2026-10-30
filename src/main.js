@@ -78,7 +78,7 @@ if (document.readyState === 'loading') {
 
 /** 供调试/演示脚本使用：暴露少量只读入口（不参与业务） */
 window.__petWorld = {
-  version: 'V1.9.0',
+  version: 'V1.9.1',
   state: () => S,
   goto: go,
   root: () => $('phone'),

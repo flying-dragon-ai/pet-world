@@ -1,4 +1,4 @@
-# 宠物数字管家 · 3D 宠物世界（V1.9）
+# 宠物数字管家 · 3D 宠物世界（V1.9.1）
 
 黑客松 Demo：虚拟人宠世界 Web App。竖屏 App 内嵌横屏 three.js 3D 宠物世界（庭院 / 天气 / 自主 AI / 手动互动），
 配套学院、打工、商城、战功事件、运动娱乐馆（Lv.30 解锁）、社区、电商、活动组局等完整模块。
@@ -45,7 +45,7 @@ src/views/w3d/            3D 舞台：ctx stage scene weather pet ai input hud t
 assets/css/app.css        全部样式
 assets/js/vendor/         three.min.js + GLTFLoader.js（r128 本地备料）
 dev/                      build.js（零依赖打包器）/ check.js（静态体检）/ smoke.js（jsdom 冒烟）/ serve.js / test/
-docs/                     PRD、3D 世界施工计划、ARCHITECTURE.md
+docs/                     PRD、3D 世界施工计划、ARCHITECTURE.md、MERGE-V1.7.5.md
 archive/                  拆分前的完整单文件备份（回滚保险）
 ```
 
@@ -66,5 +66,6 @@ archive/                  拆分前的完整单文件备份（回滚保险）
 ## 文档
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — 分层、依赖方向、扩展指南、与旧版对照
+- [`docs/MERGE-V1.7.5.md`](docs/MERGE-V1.7.5.md) — 外部 V1.7.5 合并记录（首页磁贴口径：健康管理 / 成长记录）
 - `docs/虚拟人宠世界模块PRD(1).md` — 模块需求
 - `docs/PLAN-3D宠物世界V1.8.md` — 3D 世界施工计划（含模型清单与假设）

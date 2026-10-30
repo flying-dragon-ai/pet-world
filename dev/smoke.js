@@ -79,6 +79,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   ok($('pg-home').classList.contains('on'), '游客登录 → 进入首页');
   ok(has('home-body', '今日任务'), '首页渲染出「今日任务」');
 
+  group('V1.7.5 合并：首页「日常护理」磁贴');
+  ok(has('home-body', '健康管理'), '磁贴一：健康管理');
+  ok(has('home-body', '成长记录'), '磁贴二：成长记录');
+  window.app.openHomeEntry('health');
+  await sleep(20);
+  ok($('pg-health').classList.contains('on'), '点「健康管理」→ 健康页');
+  ok(has('health-body', '健康管理'), '健康页标题已对齐为「健康管理」');
+  window.app.go('home');
+  window.app.openHomeEntry('album');
+  await sleep(20);
+  ok($('pg-profile').classList.contains('on'), '点「成长记录」→ 档案页');
+  ok(has('profile-body', '成长记录'), '档案页相册 tab 已对齐为「成长记录」');
   group('世界加载屏 → 3D 舞台降级');
   const days0 = state().world.loginDays;
   window.app.openWorld();

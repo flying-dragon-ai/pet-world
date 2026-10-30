@@ -1,6 +1,6 @@
 {
   "name": "pet-world",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "private": true,
   "description": "宠物数字管家 · 3D 宠物世界（黑客松 Demo）",
   "type": "commonjs",

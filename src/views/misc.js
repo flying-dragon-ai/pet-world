@@ -22,7 +22,7 @@ export function renderMessages(){
 function readMsg(id){
   const m=S.msgs.find(x=>x.id===id);m.read=true;save();renderTabBadges();
   const t=m.link[0];
-  if(t==='profile'){if(m.link[1]==='vaccine'){ui.healthTab='rec';ui.recType='vaccine';renderHealth();go('health');toast('深链直达：成长记录 · 健康记录（V1.7.4 已迁移至此）')}else{ui.profTab='family';renderProfile();go('profile');toast('深链直达：档案共享管理页')}}
+  if(t==='profile'){if(m.link[1]==='vaccine'){ui.healthTab='rec';ui.recType='vaccine';renderHealth();go('health');toast('深链直达：健康管理 · 健康记录（V1.7.4 已迁移至此）')}else{ui.profTab='family';renderProfile();go('profile');toast('深链直达：档案共享管理页')}}
   else if(t==='monitor'){go('monitor');toast('深链直达：事件流定位 14:32')}
   else if(t==='community'){go('community');openNotifSheet();toast('深链直达：互动消息（赞/评论/回复）')}
   else if(t==='orders'){ui.ordTab='全部';go('orders')}

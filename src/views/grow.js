@@ -58,7 +58,7 @@ export function renderHealth(){
     '</div>';
   }
   $('health-body').innerHTML=
-  '<div class="subhdr"><svg class="icon" style="cursor:pointer" onclick="app.go(\'home\')"><use href="#i-back"/></svg><b style="font-size:15px">成长记录 · '+p.name+'</b><span style="margin-left:auto;font-size:11px;color:var(--blue-d);cursor:pointer" onclick="app.exportPdf()">导出PDF</span></div>'+
+  '<div class="subhdr"><svg class="icon" style="cursor:pointer" onclick="app.go(\'home\')"><use href="#i-back"/></svg><b style="font-size:15px">健康管理 · '+p.name+'</b><span style="margin-left:auto;font-size:11px;color:var(--blue-d);cursor:pointer" onclick="app.exportPdf()">导出PDF</span></div>'+
   seg+
   '<div style="padding:14px 16px">'+body+'</div>';
 }

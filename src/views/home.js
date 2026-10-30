@@ -9,15 +9,13 @@ import { w3dGain } from './w3d/index.js';
 import { openWorld } from './world-panel.js';
 import { LVROOMS } from './../data/live-rooms.js';
 import { awardPoints } from './points.js';
-import { tabTo } from './../app/router.js';
+import { go, tabTo } from './../app/router.js';
 import { needNet } from './../app/shell.js';
 import { quickAdd, rmDays } from './records.js';
 import { registerPage } from './../app/router.js';
+import { ui } from './../app/ui-state.js';
+import { HOME_CARE_ENTRIES } from './../data/home-entries.js';
 var heroImgMode=true;
-const HOME_CARE=[
-  ['成长记录','成长数据 · 健康周报','i-chart','#4CA876',"go('health')"],
-  ['成长相册','时光记忆 · 宠物照片','i-img','#3AB5C0',"ui.profTab='album';go('profile')"]
-];
 function toggleHeroImg(){heroImgMode=!heroImgMode;renderHome();toast(heroImgMode?'已切换显示真实照片':'已切换显示动态卡通头像')}
 /* V1.7.1 点击搜索条直接跳转 AI 对话页 */
 function aiSearchFocus(){tabTo('ai');setTimeout(()=>{const i=$('chatIn');if(i)i.focus()},350)}
@@ -96,7 +94,7 @@ export function renderHome(){
     '<div style="display:flex;align-items:center;margin-bottom:8px"><b style="font-size:13.5px">健康陪伴</b><span style="margin-left:auto;font-size:10px;color:var(--sub)">记录毛孩子的每一天</span></div>'+
     '<div style="display:flex;align-items:baseline;gap:3px;padding:0 2px;margin-bottom:6px"><span style="font-size:13.5px;font-weight:800">今日健康</span><span style="font-size:30px;font-weight:900;line-height:1;margin-left:7px;color:var(--ink);background:linear-gradient(transparent 60%,rgba(95,182,240,.4) 60%);padding:0 3px">60</span><span style="font-size:12.5px;font-weight:800">分</span></div>'+
     '<div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#3A9C6F;background:rgba(76,168,118,.09);border-radius:10px;padding:8px 11px;margin-bottom:6px">今日您的宠物状态良好，比较健康，继续保持哦</div>'+
-    '<div>'+HOME_CARE.map((it,i)=>'<div style="display:flex;align-items:center;gap:11px;padding:11px 2px;cursor:pointer;'+(i?'border-top:1px solid rgba(0,0,0,.05)':'')+'" onclick="'+it[4]+'"><div style="width:36px;height:36px;border-radius:12px;background:'+it[3]+'1c;display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:'+it[3]+'"><use href="#'+it[2]+'"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">'+it[0]+'</div><div style="font-size:10px;color:var(--sub);margin-top:1px">'+it[1]+'</div></div><svg class="icon icon-s" style="color:#C9D2DD;flex:none"><use href="#i-right"/></svg></div>').join('')+'</div>'+
+    '<div>'+HOME_CARE_ENTRIES.map((entry,i)=>'<div style="display:flex;align-items:center;gap:11px;padding:11px 2px;cursor:pointer;'+(i?'border-top:1px solid rgba(0,0,0,.05)':'')+'" onclick="app.openHomeEntry(\''+entry.id+'\')"><div style="width:36px;height:36px;border-radius:12px;background:'+entry.color+'1c;display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:'+entry.color+'"><use href="#'+entry.icon+'"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">'+entry.label+'</div><div style="font-size:10px;color:var(--sub);margin-top:1px">'+entry.desc+'</div></div><svg class="icon icon-s" style="color:#C9D2DD;flex:none"><use href="#i-right"/></svg></div>').join('')+'</div>'+
   '</div>'+
   '<div class="card" style="padding:15px 16px;margin-bottom:14px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><b style="font-size:13.5px">健康概览</b><span style="font-size:11px;color:var(--blue-d);cursor:pointer;font-weight:700" onclick="app.go(\'health\')">周报详情 ›</span></div>'+
@@ -144,3 +142,16 @@ registerActions('home', { aiSearchFocus, doSearch, openPetGrowCard, toggleHeroIm
 
 /* ---------------- 页面登记 ---------------- */
 registerPage('home', { render: renderHome });
+
+/**
+ * 首页「日常护理」磁贴：按 id 找到目标页（必要时先切 tab）再跳转。
+ * 磁贴文案与去向都在 data/home-entries.js 里，这里只负责执行。
+ */
+export function openHomeEntry(id) {
+  const entry = HOME_CARE_ENTRIES.find((e) => e.id === id);
+  if (!entry) return;
+  if (entry.tab) ui.profTab = entry.tab;
+  go(entry.page);
+}
+
+registerActions('home-extra', { openHomeEntry });

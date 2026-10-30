@@ -34,7 +34,8 @@ src/
 │   ├── migrations.js   # 存档迁移（任意历史版本 → 当前结构）
 │   ├── world-tables.js # 课程/打工/商品/场馆/事件/属性表
 │   ├── w3d-assets.js   # 3D 模型地址、建筑坐标
-│   └── live-rooms.js   # 直播间与弹幕示例数据
+│   ├── live-rooms.js   # 直播间与弹幕示例数据
+│   └── home-entries.js # 首页「日常护理」磁贴表（V1.7.5 口径：健康管理 / 成长记录）
 └── views/              # 视图层（模板 + 交互）
     ├── auth.js         # 登录 / 新手导览
     ├── home.js  ai.js  community.js  profile.js  grow.js

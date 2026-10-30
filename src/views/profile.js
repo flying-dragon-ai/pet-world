@@ -77,17 +77,17 @@ function openHelp(){
 export function renderProfile(){
   const p=curPet();
   const recCnt=S.records.filter(r=>r.pet===p.id).length;
-  const tabs=[['album','成长相册'],['remind','提醒'],['family','共享'],['monitor','监控']];
+  const tabs=[['album','成长记录'],['remind','提醒'],['family','共享'],['monitor','监控']];
   $('profile-body').innerHTML=
   '<div class="subhdr"><svg class="icon" style="cursor:pointer" onclick="app.go(\'me\')"><use href="#i-back"/></svg><b style="font-size:15px">宠物档案</b><span style="margin-left:auto;cursor:pointer" onclick="ui.profileEditingPetId=\''+p.id+'\';app.go(\'petedit\')"><svg class="icon"><use href="#i-edit"/></svg></span></div>'+
   '<div class="card" style="margin:12px 16px 12px;padding:16px;display:flex;gap:13px;align-items:center"><div style="width:74px;height:74px;border-radius:24px;overflow:hidden;flex:none">'+petImgTag(p)+'</div><div style="flex:1"><div style="font-size:18px;font-weight:900">'+p.name+' <span class="chip" style="font-size:9.5px">'+p.gender+'</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.6">'+p.species+' · '+p.breed+' · '+petAge(p)+' · '+p.weight+'kg<br>绝育：'+p.neuter+' · 过敏/忌口：'+(p.note||'无')+'</div>'+((p.personality&&p.personality.length)?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">'+p.personality.map(x=>'<span class="chip" style="font-size:9px;padding:2px 8px">性格·'+x+'</span>').join('')+'</div>':'')+(p.important?'<div style="font-size:10.5px;color:#C77E12;margin-top:5px;display:flex;align-items:center;gap:4px;font-weight:600"><svg class="icon icon-s"><use href="#i-alert"/></svg>重要提示：'+esc(p.important)+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm btn-ghost" style="flex:1" onclick="app.openAvatarWizard()">'+(p.fur||p.acc?'重做虚拟形象':'生成虚拟形象')+'</button><button class="btn btn-sm btn-ghost" style="flex:1;color:#F05B5B;border-color:rgba(240,91,91,.3)" onclick="app.delPet()">删除档案</button></div></div></div>'+
-  /* V1.7.4 健康记录迁移入口条：由档案页迁至「成长记录」页 */
-  '<div class="card chov" style="margin:0 16px 12px;padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;background:linear-gradient(135deg,rgba(76,168,118,.09),rgba(59,183,134,.04))" onclick="ui.healthTab=\'rec\';app.go(\'health\')"><div style="width:36px;height:36px;border-radius:12px;background:rgba(76,168,118,.14);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:#3A9C6B"><use href="#i-med"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700">健康记录 · '+recCnt+' 条 <span class="chip" style="font-size:9px;background:rgba(76,168,118,.14);color:#2E9C6B;padding:1px 7px">已迁移</span></div><div style="font-size:10px;color:var(--sub);margin-top:1px">V1.7.4 起统一在「成长记录」页管理疫苗/驱虫/洗护/就医/饮食</div></div><svg class="icon icon-s" style="color:#C9D2DD;flex:none"><use href="#i-right"/></svg></div>'+
+  /* V1.7.4 健康记录迁移入口条：由档案页迁至「健康管理」页 */
+  '<div class="card chov" style="margin:0 16px 12px;padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;background:linear-gradient(135deg,rgba(76,168,118,.09),rgba(59,183,134,.04))" onclick="ui.healthTab=\'rec\';app.go(\'health\')"><div style="width:36px;height:36px;border-radius:12px;background:rgba(76,168,118,.14);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:#3A9C6B"><use href="#i-med"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700">健康记录 · '+recCnt+' 条 <span class="chip" style="font-size:9px;background:rgba(76,168,118,.14);color:#2E9C6B;padding:1px 7px">已迁移</span></div><div style="font-size:10px;color:var(--sub);margin-top:1px">V1.7.4 起统一在「健康管理」页管理疫苗/驱虫/洗护/就医/饮食</div></div><svg class="icon icon-s" style="color:#C9D2DD;flex:none"><use href="#i-right"/></svg></div>'+
   '<div style="display:flex;gap:7px;padding:0 16px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none">'+tabs.map(t=>'<button class="rTab'+(ui.profTab===t[0]?' act':'')+'" onclick="ui.profTab=\''+t[0]+'\';app.renderProfile()">'+t[1]+'</button>').join('')+'</div>'+
   '<div id="profBody" style="padding:0 16px">'+profBody(p)+'</div>';
 }
 function profBody(p){
-  /* V1.7.4 成长相册：月份时间线 + 统计 + 大图预览（原健康记录模块已迁出至成长记录页） */
+  /* V1.7.4 成长记录：月份时间线 + 统计 + 大图预览（原健康记录模块已迁出至健康管理页） */
   if(ui.profTab==='album'){
     const OCT=petAlbum(p);
     const SEP=['https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=300&h=300&fit=crop'];
@@ -118,7 +118,7 @@ function profBody(p){
   }
 }
 
-function photoView(im){openModal('<img src="'+im+'" style="width:100%;border-radius:16px;background:linear-gradient(135deg,#C9DCF5,#EAD9C2);min-height:200px" onerror="app.imgErr(this)"><div style="font-size:11px;color:var(--sub);text-align:center;margin-top:10px">成长相册 · 点击外部区域关闭</div>')}
+function photoView(im){openModal('<img src="'+im+'" style="width:100%;border-radius:16px;background:linear-gradient(135deg,#C9DCF5,#EAD9C2);min-height:200px" onerror="app.imgErr(this)"><div style="font-size:11px;color:var(--sub);text-align:center;margin-top:10px">成长记录 · 点击外部区域关闭</div>')}
 function openRecForm(r){
   const t=RTYPES.find(x=>x.id===ui.recType);
   const F={
@@ -211,9 +211,9 @@ function savePet(){
   save();go('profile');
 }
 
-/* 成长相册（更新宠物日常）：照片持久化于宠物家园状态，上传使人宠世界成长值+5 */
+/* 成长记录（更新宠物日常）：照片持久化于宠物家园状态，上传使人宠世界成长值+5 */
 const ALBUM_POOL=['https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=300&h=300&fit=crop'];
-/* ---------------- 成长相册（照片池为空时用示例图补齐） ---------------- */
+/* ---------------- 成长记录（照片池为空时用示例图补齐） ---------------- */
 
 export function petAlbum(pet) {
   const garden = petGarden(pet);
@@ -231,7 +231,7 @@ export function uploadAlbumPhoto() {
   save();
   renderProfile();
   addWorldGrowth(5);
-  toast('已添加 1 张照片至成长相册 · 成长值+5');
+  toast('已添加 1 张照片至成长记录 · 成长值+5');
 }
 
 registerActions('profile-album', { petAlbum, uploadAlbumPhoto });
