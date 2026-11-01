@@ -25,7 +25,7 @@ const DIST = path.join(ROOT, 'dist');
 
 const IMPORT_RE = /^import\s+(\{[\s\S]*?\}|\*\s+as\s+[\w$]+|[\w$]+)\s+from\s+['"]([^'"]+)['"];?[ \t]*$/gm;
 const BARE_IMPORT_RE = /^import\s+['"]([^'"]+)['"];?[ \t]*$/gm;
-const REEXPORT_RE = /^export\s+(\{[\s\S]*?\})\s+from\s+['"]([^'"]+)['"];?[ \t]*$/gm;
+const REEXPORT_RE = /^export\s+(\{[^{}]*?\})\s+from\s+['"]([^'"]+)['"];?[ \t]*$/gm;
 const LOCAL_EXPORT_LIST_RE = /^export\s*\{([^}]*)\}\s*;?[ \t]*$/gm;
 const EXPORT_FUNCTION_RE = /^export\s+(async\s+)?function\s+([\w$]+)/gm;
 const EXPORT_VAR_RE = /^export\s+(const|let|var)\s+([\w$]+)/gm;
@@ -97,6 +97,19 @@ function transform(file, source) {
     return whole;
   });
 
+  /* 同一模块里重复导入同名符号是 ESM 早期错误，提前给出可读报错 */
+  const importedNames = new Map();
+  for (const m of code.matchAll(/^import\s+\{([^}]*)\}\s+from/gm)) {
+    for (const piece of m[1].split(',')) {
+      const name = piece.split(/\s+as\s+/)[0].trim();
+      if (!/^[A-Za-z_$][\w$]*$/.test(name)) continue;
+      if (importedNames.has(name)) {
+        fail(id + ' 重复导入符号 ' + name + '（第 ' + importedNames.get(name) + ' 行与此处）');
+      }
+      importedNames.set(name, code.slice(0, m.index).split('\n').length);
+    }
+  }
+
   /* import './x.js' */
   code = code.replace(BARE_IMPORT_RE, (whole, request) => {
     return "__require('" + moduleId(resolveId(file, request)) + "');";
@@ -128,8 +141,16 @@ function transform(file, source) {
   const leftover = code.split('\n').find((line) => /^\s*(import|export)\s/.test(line));
   if (leftover) fail(id + ' 残留未处理的 import/export：' + leftover.trim());
 
+  // 语法自检：模块体单独编译一次，坏模块当场点名，不留到浏览器里白屏
+  const body = exportStatements.join('\n') + '\n' + code;
+  try {
+    new Function(body);
+  } catch (e) {
+    fail(id + ' 语法错误：' + e.message);
+  }
+
   // 函数声明会提升，导出赋值放最前面也能拿到引用
-  return exportStatements.join('\n') + '\n' + code;
+  return body;
 }
 
 const modules = new Map();
@@ -183,6 +204,8 @@ function copyStatic() {
     ['assets/css/app.css', 'assets/css/app.css'],
     ['assets/js/vendor/three.min.js', 'assets/js/vendor/three.min.js'],
     ['assets/js/vendor/GLTFLoader.js', 'assets/js/vendor/GLTFLoader.js'],
+    ['assets/js/vendor/marked.min.js', 'assets/js/vendor/marked.min.js'],
+    ['assets/js/vendor/purify.min.js', 'assets/js/vendor/purify.min.js'],
   ];
   for (const [from, to] of pairs) {
     const target = path.join(DIST, to);

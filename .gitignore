@@ -1,5 +1,54 @@
-serve.log
-node_modules/
-dist/
+# ── 依赖与构建产物 ───────────────────────────────
+# npm 依赖（目前只有 jsdom，测试用）
+/node_modules/
+# dev/build.js 的打包产物：bundle.js + 复制好的 vendor/css
+/dist/
+# TypeScript 增量产物（本项目暂时用不到，防以后误提交）
+*.tsbuildinfo
+
+# ── 运行日志与临时输出 ───────────────────────────
+*.log
+/logs/
+# 测试输出重定向（npm test > test-out.txt 之类）
+test-out*.txt
+*.tmp
+*.bak
+*~
+# Windows 上把输出重定向到 NUL 误建出来的空设备文件
+NUL
+
+# ── 本地环境与密钥 ───────────────────────────────
+# 真要放配置样例，命名 .env.example 并用下面的 ! 放行
+.env
+.env.*
+!.env.example
+
+# ── 测试与工具缓存 ───────────────────────────────
+/coverage/
+/.nyc_output/
+.eslintcache
+.stylelintcache
+.cache/
+
+# ── 编辑器 / IDE ────────────────────────────────
+/.vscode/
+/.idea/
+*.swp
+*.swo
+*.code-workspace
+
+# ── 操作系统垃圾文件 ─────────────────────────────
 .DS_Store
 Thumbs.db
+ehthumbs.db
+desktop.ini
+._*
+
+# ── 仓库根目录只保留 index.html ──────────────────
+# 外部协作方发来的单文件版本（例如 宠物数字管家APPV1.7.5(1).html、
+# 虚拟宠物家园小游戏(1).html）不要混进主线：需要留档请放进 archive/
+/*.html
+!/index.html
+
+# 注意：package-lock.json、assets/js/vendor/、assets/models/、docs/ 都要提交，
+# 它们分别是可复现安装、随包分发的第三方库、模型素材与设计文档。
