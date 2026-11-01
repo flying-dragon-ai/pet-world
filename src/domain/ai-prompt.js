@@ -98,15 +98,17 @@ export function buildSystemPrompt(pet, sceneId) {
 
 /**
  * 把会话消息整理成「发给模型的消息数组」。
- * @param {Array<{r:string,t:string}>} msgs 历史消息（r: 'me' | 'ai'）
+ * @param {Array<{r:string,t:string,emg?:boolean}>} msgs 历史消息（r: 'me' | 'ai'）
  * @param {string} prompt System Prompt
  * @param {number} [limit] 最多带多少条历史（默认 10，防止上下文无限膨胀）
  * @returns {Array<{role:string,content:string}>}
  */
 export function composeMessages(msgs, prompt, limit = 10) {
+  const n = Math.max(0, Math.floor(Number(limit) || 0));
   const history = (msgs || [])
-    .filter((m) => m && m.r && m.t)
-    .slice(-limit)
+    .filter((m) => m && (m.r === 'me' || m.r === 'ai') && !m.emg && m.t)
     .map((m) => ({ role: m.r === 'me' ? 'user' : 'assistant', content: String(m.t) }));
-  return [{ role: 'system', content: prompt }].concat(history);
+  // 注意：limit 为 0 时不能用 slice(-0)（那等于整段历史），必须显式取空
+  const tail = n > 0 ? history.slice(-n) : [];
+  return [{ role: 'system', content: String(prompt || '') }].concat(tail);
 }

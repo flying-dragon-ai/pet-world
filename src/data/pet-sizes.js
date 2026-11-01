@@ -2,12 +2,17 @@
  * 宠物体型参考表（纯数据层，无副作用）。
  *
  * 犬种数值来源：https://github.com/tmfilho/akcdata （MIT License）
- *   —— 277 个犬种，含成年身高区间(cm)、体重区间(kg)、AKC 组别、活力值、服从性。
+ *   —— 原始数据抓取自 AKC 官网（2020-05-18），单位已换算为 cm / kg；
+ *   —— 含成年身高区间、体重区间、AKC 组别、活力值、服从性，共 276 个犬种。
+ *   —— 本项目只取数值，不复制 AKC 的介绍 / 性情等文字内容（只抄数值不抄文案）。
  *   BREED_SIZES 块由 `node dev/gen-pet-sizes.js` 从 data/akc-data-latest.csv 生成，
  *   AUTO-GEN 标记之间的内容不要手改；其余部分（猫表 / 中文别名 / 阈值）手工维护。
  *
  * 猫的参考值是人工整理的：GitHub 上没有可用的开源猫体重表，
  * 调研过程见 docs/research/wheels-pet-body-and-battle.md。
+ *
+ * 口径：以下都是**参考区间（AKC 2020）**，用于 App 内的体型提示与战力换算，
+ * 不是医学结论，也不替代兽医的触诊与 BCS 判定。
  *
  * 记录格式：
  *   [身高下限cm, 身高上限cm, 体重下限kg, 体重上限kg, 组别中文, 活力0-100, 服从0-100]
@@ -349,10 +354,11 @@ export const BREED_ALIAS = {
   '威尔士柯基': 'Pembroke Welsh Corgi',
   '彭布罗克柯基': 'Pembroke Welsh Corgi',
   '卡迪根柯基': 'Cardigan Welsh Corgi',
-  '泰迪': 'Toy Poodle',
-  '泰迪熊': 'Toy Poodle',
-  '贵宾': 'Poodle',
-  '贵宾犬': 'Poodle',
+  '泰迪': 'Poodle (Toy)',
+  '泰迪熊': 'Poodle (Toy)',
+  '玩具贵宾': 'Poodle (Toy)',
+  '贵宾': 'Poodle (Miniature)',
+  '贵宾犬': 'Poodle (Miniature)',
   '比熊': 'Bichon Frise',
   '比熊犬': 'Bichon Frise',
   '博美': 'Pomeranian',
@@ -369,6 +375,8 @@ export const BREED_ALIAS = {
   '阿拉斯加雪橇犬': 'Alaskan Malamute',
   '雪纳瑞': 'Miniature Schnauzer',
   '迷你雪纳瑞': 'Miniature Schnauzer',
+  '标准雪纳瑞': 'Standard Schnauzer',
+  '巨型雪纳瑞': 'Giant Schnauzer',
   '腊肠犬': 'Dachshund',
   '腊肠': 'Dachshund',
   '巴哥': 'Pug',
@@ -413,28 +421,26 @@ export const BREED_ALIAS = {
   '万能梗': 'Airedale Terrier',
   '凯利梗': 'Kerry Blue Terrier',
   '爱尔兰梗': 'Irish Terrier',
-  '苏梗': 'Soft Coated Wheaten Terrier',
+  '苏梗': 'Scottish Terrier',
   '刚毛㹴': 'Wire Fox Terrier',
-  '猎狐梗': 'Fox Terrier',
+  '刚毛猎狐梗': 'Wire Fox Terrier',
+  '猎狐梗': 'Smooth Fox Terrier',
   '大丹犬': 'Great Dane',
   '大丹': 'Great Dane',
   '伯恩山': 'Bernese Mountain Dog',
   '伯恩山犬': 'Bernese Mountain Dog',
-  '纽波利顿': 'Newfoundland',
+  '纽波利顿': 'Neapolitan Mastiff',
   '纽芬兰犬': 'Newfoundland',
-  '比特犬': 'American Pit Bull Terrier',
-  '比特': 'American Pit Bull Terrier',
-  '苏牧': 'German Shepherd Dog',
+  '比特犬': 'American Staffordshire Terrier',
+  '比特': 'American Staffordshire Terrier',
+  '苏牧': 'Collie',
   '柯利犬': 'Collie',
   '粗毛柯利': 'Collie',
-  '猎鹿犬': 'Doberman Pinscher',
-  '杜宾犬': 'Doberman Pinscher',
+  '猎鹿犬': 'Scottish Deerhound',
   '可卡': 'Cocker Spaniel',
-  '腊肠小猎犬': 'Dachshund',
   '荷兰毛狮犬': 'Keeshond',
-  '博美犬': 'Pomeranian',
-  '迷你贵宾': 'Toy Poodle',
-  '标准贵宾': 'Standard Poodle',
+  '迷你贵宾': 'Poodle (Toy)',
+  '标准贵宾': 'Poodle (Standard)',
 };
 
 /**
@@ -466,8 +472,22 @@ export const BCS_LABELS = {
 };
 
 /**
+ * 按长度降序的 key 表（子串匹配必须长名优先，否则「巨型雪纳瑞」会先命中「雪纳瑞」）。
+ * 模块级预计算，纯查找，无副作用。
+ * @param {object} table
+ * @returns {string[]}
+ */
+function keysByLength(table) {
+  return Object.keys(table).sort((a, b) => b.length - a.length);
+}
+
+const ALIAS_KEYS = keysByLength(BREED_ALIAS);
+const CAT_KEYS = keysByLength(CAT_SIZES);
+const BREED_KEYS = keysByLength(BREED_SIZES);
+
+/**
  * 品种名 → 参考表 key（纯查找，属于数据层）。
- * 匹配顺序：精确命中 → 中文别名 → 别名是子串 → 表名是子串。
+ * 匹配顺序：精确命中 → 中文别名 → 别名是子串（长名优先）→ 表名是子串（长名优先）。
  * 例：'中华田园猫（橘）' → '中华田园猫'；'拉布拉多混血' → '拉布拉多'。
  * @param {string} breed
  * @returns {string|null}
@@ -478,14 +498,15 @@ export function breedKeyOf(breed) {
   if (BREED_SIZES[b] || CAT_SIZES[b]) return b;
   const alias = BREED_ALIAS[b];
   if (alias && (BREED_SIZES[alias] || CAT_SIZES[alias])) return alias;
-  for (const cn of Object.keys(BREED_ALIAS)) {
+  for (const cn of ALIAS_KEYS) {
+    if (b.length < cn.length) continue;
     if (b.indexOf(cn) >= 0) {
       const t = BREED_ALIAS[cn];
       if (BREED_SIZES[t] || CAT_SIZES[t]) return t;
     }
   }
-  for (const k of Object.keys(CAT_SIZES)) if (b.indexOf(k) >= 0) return k;
-  for (const k of Object.keys(BREED_SIZES)) if (b.indexOf(k) >= 0) return k;
+  for (const k of CAT_KEYS) if (b.indexOf(k) >= 0) return k;
+  for (const k of BREED_KEYS) if (b.indexOf(k) >= 0) return k;
   return null;
 }
 

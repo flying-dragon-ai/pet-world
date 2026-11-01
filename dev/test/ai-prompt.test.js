@@ -112,3 +112,90 @@ test('拒答与开场白', () => {
   assert.ok(localGreeting('ask', PET).includes('尖尖'));
   assert.ok(localGreeting('shop', null).length > 0);
 });
+
+/* ---------------- 端口化后补的用例 ---------------- */
+
+const SCENE_IDS = ['ask', 'care', 'feed', 'watch', 'attr', 'shop', 'write', 'trip', 'doll'];
+
+test('九个场景 id 与文档完全一致，buildSystemPrompt 不抛且带上角色设定', () => {
+  assert.deepEqual(AI_SCENES.map((s) => s.id), SCENE_IDS, '顺序与 id 都是契约，chip 按这个顺序渲染');
+  for (const id of SCENE_IDS) {
+    const scene = sceneOf(id);
+    for (const pet of [PET, null]) {
+      let prompt = '';
+      assert.doesNotThrow(() => { prompt = buildSystemPrompt(pet, id); }, id + ' 不能抛');
+      assert.ok(prompt.includes(scene.role), id + ' 要带上本场景的角色设定');
+      assert.ok(prompt.includes('不给药品剂量建议'), id + ' 要带上安全底线');
+      if (pet) assert.ok(prompt.includes('尖尖'), id + ' 要注入档案');
+      else assert.ok(prompt.includes('没有注入宠物档案'), id + ' 通用模式要明说');
+    }
+  }
+});
+
+test('场景对象结构完整（chip 渲染依赖 n / i / c / d）', () => {
+  for (const s of AI_SCENES) {
+    assert.ok(s.n && s.i && s.c && s.d && s.role, s.id + ' 字段短缺');
+    assert.match(s.c, /^#[0-9A-Fa-f]{6}$/, s.id + ' 的 c 必须是颜色值（会被拼进 style）');
+    assert.match(s.i, /^i-[a-z]+$/, s.id + ' 的 i 必须是图标 id');
+  }
+});
+
+test('RISK_KW：每个词都命中，且不误伤日常问句', () => {
+  assert.ok(RISK_KW.length >= 3);
+  for (const k of RISK_KW) {
+    assert.equal(isRiskQuestion('请问' + k + '怎么算'), true, '没命中：' + k);
+  }
+  for (const q of ['今天有点拉稀', '多久洗一次澡', '每天喂多少克', '帮我写一条晒猫的帖子']) {
+    assert.equal(isRiskQuestion(q), false, '误伤了：' + q);
+  }
+  assert.equal(isRiskQuestion(null), false);
+});
+
+test('EMG_KW：每个词都命中，且不误伤日常问句', () => {
+  assert.ok(EMG_KW.length >= 3);
+  for (const k of EMG_KW) {
+    assert.equal(isEmergency('它突然' + k + '了'), true, '没命中：' + k);
+  }
+  for (const q of ['今天很开心', '想带它出去玩', '推荐一款猫粮']) {
+    assert.equal(isEmergency(q), false, '误伤了：' + q);
+  }
+  assert.equal(isEmergency(undefined), false);
+});
+
+test('hitKeywords：纯函数，不取决于参数顺序', () => {
+  assert.equal(hitKeywords('猫呕吐了', ['呕吐']), true);
+  assert.equal(hitKeywords('猫呕吐了', ['拉稀']), false);
+  assert.equal(hitKeywords('', ['呕吐']), false);
+  assert.equal(hitKeywords('任意', []), false);
+});
+
+test('composeMessages：历史裁剪上限稳定（默认 10 / 显式 limit / 0 / 负数）', () => {
+  const many = [];
+  for (let i = 0; i < 50; i++) many.push({ r: i % 2 ? 'ai' : 'me', t: 'm' + i });
+
+  const def = composeMessages(many, 'P');
+  assert.equal(def.length, 11, '默认最多 10 条历史 + 1 条 system');
+  assert.equal(def[1].content, 'm40', '裁的是最旧的，留最新的 10 条');
+  assert.equal(def[10].content, 'm49');
+
+  assert.equal(composeMessages(many, 'P', 3).length, 4);
+  assert.equal(composeMessages(many, 'P', 0).length, 1, 'limit:0 只能剩 system（不能退化成整段历史）');
+  assert.equal(composeMessages(many, 'P', -5).length, 1, '负数按 0 算');
+  assert.equal(composeMessages(many, 'P', 999).length, 51, '上限比总数大时不丢消息');
+});
+
+test('composeMessages：非对话消息（急症卡 / 商品卡）不进上下文', () => {
+  const msgs = [
+    { r: 'me', t: '它吐了' },
+    { r: 'ai', t: '急诊提示', emg: true },
+    { r: 'cards', items: [{ name: '猫粮' }] },
+    { r: 'ai', t: '先禁食' },
+    { r: 'ai', t: '' },
+    null,
+  ];
+  const out = composeMessages(msgs, 'P');
+  assert.equal(out.length, 3);
+  assert.deepEqual(out.map((m) => m.content), ['P', '它吐了', '先禁食']);
+  assert.equal(composeMessages(null, null).length, 1);
+  assert.equal(composeMessages(null, null)[0].content, '');
+});

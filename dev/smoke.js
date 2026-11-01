@@ -91,6 +91,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await sleep(20);
   ok($('pg-profile').classList.contains('on'), '点「成长记录」→ 档案页');
   ok(has('profile-body', '成长记录'), '档案页相册 tab 已对齐为「成长记录」');
+  group('V1.7.5(2) 合并：服务子页返回键回服务菜单');
+  for (const [page, name] of [['mall', '宠物商城'], ['travel', '携宠旅游'], ['act', '活动组局']]) {
+    window.app.go(page);
+    await sleep(20);
+    const back = window.document.querySelector('#pg-' + page + ' .subhdr svg');
+    ok(!!back, name + '：返回键存在');
+    if (back) back.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await sleep(20);
+    ok($('pg-menu').classList.contains('on'), name + '：返回键 → 服务菜单');
+  }
   group('世界加载屏 → 3D 舞台降级');
   const days0 = state().world.loginDays;
   window.app.openWorld();

@@ -1,18 +1,192 @@
 /**
  * 3D 世界的资源与坐标配置（纯数据）。
  *
- * 模型走 CDN（加载失败/超时会退回程序化拼装的小动物，见 views/w3d/pet.js）。
+ * 宠物本体走本地 GLB（assets/models/pets/*.glb）。目录里 22 个品种，但磁盘上不保证
+ * 每个都有 GLB，所以每只的可渲染来源在数据层声明死，分三种（见 modelFor）：
+ *   own    —— 有 assets/models/pets/<key>.glb
+ *   alias  —— 借同科另一只的 GLB（PET_FALLBACK）
+ *   proc   —— 完全没有可借的 GLB，交给程序化体型现搭（PROC_PETS，零字节资产）
+ * 降级链在 views/w3d/pet.js：本体 → alias → proc → 球体橘猫。模型由 Hyper3D
+ * （Rodin Gen-2.5）出几何、四足骨骼绑定后带 idle / walk / run 三支 clip，
+ * 体检页：dev/model-check.html?m=<路径>，契约体检：dev/check-assets.js。
  * 建筑热点的 x/z 是庭院坐标系，与 scene.js 里的地面半径 12.6 保持同一尺度。
  */
-const FOX = 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@main/2.0/Fox/glTF-Binary/Fox.glb';
+const MODEL = (key) => `assets/models/pets/${key}.glb`;
 
-/** 物种 → GLTF 模型 */
-export const PET_MODELS = {
-  猫: { url: 'assets/models/pets/cat-rig.glb', scale: 0.8 },
-  狗: { url: FOX, scale: 1.0 },
-  鸟: { url: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/models/gltf/Parrot.glb', scale: 1 },
-  异宠: { url: 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/models/gltf/Flamingo.glb', scale: 1 },
+/**
+ * 宠物模型库（22 只，覆盖猫狗 / 小型哺乳 / 鸟类 / 鱼类 / 异宠）。
+ * key 即文件名；group 只用于选型与统计，不参与渲染。
+ */
+export const PET_CATALOG = {
+  // 猫狗
+  cat: { n: '猫', group: '猫狗' },
+  teddy: { n: '泰迪犬', group: '猫狗' },
+  bichon: { n: '比熊犬', group: '猫狗' },
+  corgi: { n: '柯基', group: '猫狗' },
+  golden: { n: '金毛', group: '猫狗' },
+  // 小型哺乳
+  hamster: { n: '仓鼠', group: '小型哺乳' },
+  rabbit: { n: '兔子', group: '小型哺乳' },
+  chinchilla: { n: '龙猫', group: '小型哺乳' },
+  guineapig: { n: '荷兰猪', group: '小型哺乳' },
+  hedgehog: { n: '刺猬', group: '小型哺乳' },
+  // 鸟类
+  budgie: { n: '虎皮鹦鹉', group: '鸟类' },
+  cockatiel: { n: '玄凤鹦鹉', group: '鸟类' },
+  canary: { n: '金丝雀', group: '鸟类' },
+  // 鱼类
+  goldfish: { n: '金鱼', group: '鱼类' },
+  koi: { n: '锦鲤', group: '鱼类' },
+  tropical: { n: '热带鱼', group: '鱼类' },
+  // 异宠
+  turtle: { n: '乌龟', group: '异宠' },
+  lizard: { n: '蜥蜴', group: '异宠' },
+  gecko: { n: '守宫', group: '异宠' },
+  snake: { n: '蛇', group: '异宠' },
+  frog: { n: '青蛙', group: '异宠' },
+  ant: { n: '蚂蚁', group: '异宠' },
 };
+
+/**
+ * 缺模型的替补：key → 已有 GLB 的 key。
+ * 只在「本体没有 GLB」或「本体加载失败/超时」时生效，不是替代品清单；
+ * 目标必须是 PET_CATALOG 里的 key，且不能再指向另一个 alias（不许串链）。
+ */
+export const PET_FALLBACK = {
+  guineapig: 'hamster', // 荷兰猪 ≈ 仓鼠体型
+  cockatiel: 'budgie', // 玄凤 ≈ 虎皮鹦鹉
+  canary: 'budgie', // 金丝雀 ≈ 虎皮鹦鹉
+};
+
+/**
+ * 程序化体型：只作为**兜底**声明。磁盘上如果真有 <key>.glb（并行流水线会陆续补）
+ * 就用真模型；没有、或者加载失败/超时，才让 views/w3d/proc-pet.js 用 three 原生
+ * 几何体现搭（自带走动摆动，不吃动画 clip）。值必须是 proc-pet.js 里 PROC_BUILDERS 的键。
+ */
+export const PROC_PETS = {
+  goldfish: 'fish',
+  koi: 'fish',
+  tropical: 'fish',
+  turtle: 'reptile',
+  lizard: 'reptile',
+  gecko: 'reptile',
+  snake: 'reptile',
+  frog: 'frog',
+  ant: 'insect',
+};
+
+/** 品种/物种名 → 模型 key。顺序即优先级，先命中先用。 */
+export const BREED_MODEL_RULES = [
+  // 猫狗
+  [/柯基|corgi/i, 'corgi'],
+  [/金毛|golden\s*retriever|寻回犬/i, 'golden'],
+  [/泰迪|贵宾|poodle|teddy/i, 'teddy'],
+  [/比熊|bichon/i, 'bichon'],
+  // 龙猫 比 猫 优先：带「猫」的物种名不能落到 cat
+  [/龙猫|毛丝鼠|chinchilla/i, 'chinchilla'],
+  [/猫|cat|feline/i, 'cat'],
+  [/犬|狗|dog|canine|retriever|shepherd|terrier/i, 'golden'],
+  // 小型哺乳
+  [/仓鼠|hamster/i, 'hamster'],
+  [/兔|rabbit|bunny/i, 'rabbit'],
+  [/荷兰猪|豚鼠|guinea\s*pig|cavy/i, 'guineapig'],
+  [/刺猬|hedgehog/i, 'hedgehog'],
+  // 鸟类
+  [/玄凤|cockatiel/i, 'cockatiel'],
+  [/金丝雀|芙蓉鸟|canary/i, 'canary'],
+  [/虎皮|鹦鹉|parrot|budgie|parakeet|bird|鸟/i, 'budgie'],
+  // 鱼类
+  [/锦鲤|koi/i, 'koi'],
+  [/金鱼|goldfish/i, 'goldfish'],
+  [/热带鱼|神仙鱼|angelfish|tetra|guppy|fish|鱼/i, 'tropical'],
+  // 异宠
+  [/守宫|gecko/i, 'gecko'],
+  [/蜥蜴|鬃狮|lizard|dragon/i, 'lizard'],
+  [/龟|tortoise|turtle/i, 'turtle'],
+  [/蛇|snake|python|corn/i, 'snake'],
+  [/蛙|蟾蜍|frog|toad/i, 'frog'],
+  [/蚂蚁|ant/i, 'ant'],
+];
+
+/** 物种兜底模型（BREED_MODEL_RULES 都没命中时用） */
+export const PET_MODELS = {
+  猫: { url: MODEL('cat'), scale: 1 },
+  狗: { url: MODEL('golden'), scale: 1 },
+  鸟: { url: MODEL('budgie'), scale: 1 },
+  鱼: { url: MODEL('goldfish'), scale: 1 },
+  异宠: { url: MODEL('turtle'), scale: 1 },
+};
+
+/**
+ * 目录 key → 可渲染来源。纯函数（不读 store、不碰磁盘），所以「本体文件在不在」是
+ * 运行期的事：有 url 就先试本体，加载失败再试 aliasUrl，再不行才用 proc 现搭。
+ *
+ * 形状（调用点永远是「先试 url，再退 proc」）：
+ *   { key, scale, url, alias?, aliasUrl?, proc? }
+ * 即：proc 只出现在 PROC_PETS 里登过的品种上，且只是兜底 —— url 才是首选。
+ *
+ * @param {string} key
+ * @returns {{key: string, scale: number, url: string, proc?: string, alias?: string, aliasUrl?: string}}
+ */
+export function modelFor(key) {
+  const k = PET_CATALOG[key] ? key : 'cat';
+  const src = { key: k, scale: 1, url: MODEL(k) };
+  const alias = PET_FALLBACK[k];
+  if (alias && PET_CATALOG[alias]) {
+    src.alias = alias;
+    src.aliasUrl = MODEL(alias);
+  }
+  if (PROC_PETS[k]) src.proc = PROC_PETS[k];
+  return src;
+}
+
+/**
+ * 按宠物档案挑可渲染来源：先拿品种名过一遍关键词表，再退回物种默认。
+ * 纯函数，不读 store，方便单测。
+ *
+ * @param {{species?: string, breed?: string}} pet
+ * @returns {{key: string, scale: number, url: string, proc?: string, alias?: string, aliasUrl?: string}}
+ */
+export function petModelOf(pet) {
+  const breed = String((pet && pet.breed) || '');
+  for (const [re, key] of BREED_MODEL_RULES) {
+    if (re.test(breed) && PET_CATALOG[key]) return modelFor(key);
+  }
+  const fallback = PET_MODELS[(pet && pet.species) || '猫'] || PET_MODELS.猫;
+  return modelFor(fallback.url.slice(fallback.url.lastIndexOf('/') + 1, -4));
+}
+
+/**
+ * 从 GLB 自带的 clip 里挑 idle / walk / run 三支。
+ *
+ * 各家动画预设命名不统一（Canine_idle / Bird_idlestanding / Fish_swim / seaturtle_anim），
+ * 所以按"角色 → 关键词候选表"的顺序匹配，而不是一条大正则：
+ * 鱼没有 walk，就用 swim 当走、dash 当跑；龟的第一支是 anim，交给 clips[0] 兜底。
+ *
+ * 放在数据层是为了让 dev/check-assets.js 能拿同一份规则核对产出的 GLB，
+ * 视图层不再各写一套正则。纯函数，入参就是 gltf.animations。
+ *
+ * @param {{name: string}[]} clips
+ * @returns {{idle: object, walk: object, run: object}}
+ */
+export function pickClips(clips) {
+  const ROLES = {
+    idle: [/idle/i, /survey/i, /rest/i, /breath/i],
+    walk: [/walk/i, /trot/i, /swim/i],
+    run: [/run/i, /gallop/i, /dash/i, /fly/i, /swim/i],
+  };
+  const findRole = (patterns) => {
+    for (const re of patterns) {
+      const hit = clips.find((c) => re.test(c && c.name));
+      if (hit) return hit;
+    }
+    return null;
+  };
+  const idle = findRole(ROLES.idle) || clips[0];
+  const walk = findRole(ROLES.walk) || idle;
+  const run = findRole(ROLES.run) || walk;
+  return { idle, walk, run };
+}
 
 /** 建筑热点 → 世界面板 tab（运动/娱乐 Lv.30 解锁） */
 export const BUILDING_SPOTS = [

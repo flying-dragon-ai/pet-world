@@ -1,4 +1,4 @@
-# 架构说明 · 宠物数字管家 V1.9
+# 架构说明 · 宠物数字管家 V1.10
 
 本文说明这次 rebuild 之后代码怎么分层、为什么这么分、以及新增功能该往哪儿写。
 
@@ -18,14 +18,17 @@ src/
 │   ├── clock.js        # 时间端口：now() / today()，测试可注入固定时钟
 │   ├── persistence.js  # 存储端口：localStorage ⇄ 内存自动降级
 │   ├── store.js        # 状态仓库 S（稳定引用 + save() 落盘）
-│   ├── dom.js          # $ / $$ / esc / mdToHtml / imgErr …
+│   ├── dom.js          # $ / $$ / esc / jsArg / mdToHtml / imgErr …
 │   ├── format.js       # 时间等人话格式化（纯函数）
 │   ├── ui.js           # toast / sheet / modal / 二次确认
 │   ├── ui-state.js     # 瞬时 UI 状态（tab、筛选、草稿…），唯一额外的全局出口
 │   ├── actions.js      # 动作注册表 + window.app 桥
-│   ├── llm.js          # AI 出口（端口）：默认本地语料，将来换真模型只改这里
+│   ├── llm.js          # AI 出口（端口）：本地语料 + makeSseBackend 真 HTTP 后端工厂
 │   ├── pages.js→router.js  # 页面登记与切页
 │   └── shell.js        # 状态栏、手机框缩放、未读红点、离线横幅
+│
+├── vendor/             # 原生 ESM 单文件库（eventsource-parser：SSE 分帧）
+│                       # 跟 module 图走，不进 index.html 的 <script> 白名单
 ├── domain/             # 领域层（纯函数，不依赖 DOM / 存储）
 │   ├── pet.js          # 家园四维、等级、年龄 + 体型/体况/生长阶段
 │   ├── world.js        # 六维、等级、事件、离线衰减、消耗/收益
@@ -57,10 +60,12 @@ src/
         ├── scene.js    # 庭院：地面/篱笆/树/小屋/建筑/躺垫/家具 + 主题配色
         ├── weather.js  # 晴阴雨雪 + 四季 + 天空渐变 + 光照
         ├── pet.js      # GLTF 加载 + 兜底模型 + 动画状态机
-        ├── ai.js       # 自主行为状态机（23 态：摇尾/嗅闻/躺垫/拆家/进屋…）+ 手写动画
+        ├── proc-pet.js # 程序化宠物体型（鱼/爬行/蛙/虫），零资产零网络
+        ├── ai.js       # 自主行为状态机（状态枚举是文件顶部导出的 AI 对象，态数见 README 硬数字表）+ 手写动画
         ├── input.js    # 拖动环绕 / 双指缩放 / 点按拾取
         ├── hud.js      # 顶部六维微条 + 宠物信息行（名字/品种/天数/天气季节/战功）+ 气泡定位
         ├── tick.js     # 帧循环
+        ├── fx.js       # 舞台内即时反馈：聊天气泡 / 表情飘字 / toast（舞台未开时退回全局）
         ├── interactions.js  # 手动互动（值表在 domain/w3d.js）
         ├── chat.js     # 3D 内宠物聊天面板（台词规则在 domain/w3d.js）
         ├── events.js   # 运行时战功事件 + 生活小事件 + 社区帖事件落地
@@ -122,22 +127,27 @@ registerActions('mall-extra', { clearRecentViews, selectAllCart, toggleCartItem 
 `src/app/llm.js` 是**唯一的 AI 出口**：
 
 ```js
-llm.chat({ pet, question, scene, prompt, messages, onDelta, signal })
-  → Promise<{ text, stopped, reason }>
+llm.chat({ pet, question, scene, prompt, messages, onDelta, signal, timeoutMs?, retries? })
+  → Promise<{ text, stopped, reason } | { ok:false, code, message }>
 ```
 
-- 现在 `llm.js` 内部默认走 `domain/ai-local.js` 的本地演示语料（离线可用、结果可复现）；
-- 将来接真模型，只要 `setLlmBackend(你的函数)`，**`views/ai.js` 一行都不用改**；
-- 视图只负责把 `onDelta` 收到的增量显示出来，不关心内容从哪来；
-- ⚠️ 真接 API 时 **Key 不能进前端**，必须走自己的服务端代理转发。
+- 默认后端走 `domain/ai-local.js` 的本地演示语料（离线可用、结果可复现）；
+- `setLlmBackend(fn)` 装任意后端；`makeSseBackend({endpoint, fetchImpl})` 是已经拼好的
+  「真 HTTP + SSE + 超时 + 重试」后端工厂（`fetchImpl` 可注入，所以能单测）；
+- 错误归一成四个码：`timeout` / `aborted` / `upstream` / `parse`（`LLM_CODES`）。
+  视图只认 `code`，不拿 `message` 做分支；
+- `onDelta(text)` 传的是**到目前为止的完整文本**（不是增量切片的拼装），视图直接整体赋值；
+- ⚠️ 真接 API 时 **Key 不能进前端**：`endpoint` 必须指向你自己的服务端代理（由代理注入 Key），
+  而不是 `api.openai.com` 之类的上游域名。
 
 ### 5. 第三方库怎么进项目
 
 | 库 | 许可 | 体积 | 用途 |
 |---|---|---|---|
-| `three.min.js` / `GLTFLoader.js` | MIT | 603KB / 96KB | 3D 舞台（既有） |
+| `three.min.js` / `GLTFLoader.js` | MIT | 603KB / 96KB | 3D 舞台（既有，classic script） |
 | `marked.min.js` | MIT | 39,903 字节 | Markdown 渲染（AI 回复 / 社区正文） |
 | `purify.min.js` | Apache-2.0 / MPL-2.0 | 29,828 字节 | XSS 消毒（**Markdown 渲染的硬前提**） |
+| `src/vendor/eventsource-parser.js` | MIT | 8,417 字节（含文件头） | SSE 分帧，供 `makeSseBackend` 用；**原生 ESM，不走 script 白名单** |
 
 三条规矩：
 
@@ -149,11 +159,15 @@ llm.chat({ pet, question, scene, prompt, messages, onDelta, signal })
 
 ## 可测试性设计
 
+> 下表只列「关卡 → 命令 → 覆盖范围」。**具体条数不在本文写死**：本仓库常年有多个 Agent 并行加测试，
+> 硬数字统一记在 [`README.md`的「硬数字」表](../README.md#硬数字实测快照)，每次采集都带时间戳与来源命令。
+
 | 关卡 | 命令 | 覆盖 |
 |---|---|---|
-| 静态体检 | `npm run check:static` | import 路径、循环依赖、动作契约 |
-| 领域单测 | `npm test` | 等级曲线、消耗收益、事件触发、离线衰减、迁移、冷却、体型分级、战斗结算、AI 词表与 prompt、发帖校验与分页…（85 项） |
-| 浏览器冒烟 | `npm run test:smoke` | jsdom 真跑 bundle：登录→首页→世界→3D 降级→面板七个 tab→互动→事件卡→逐页渲染→存档（60 项） |
+| 静态体检 | `npm run check:static` | import 路径、循环依赖、动作契约、具名导出 |
+| 领域单测 | `npm test` | 等级曲线、消耗收益、事件触发、离线衰减、迁移、冷却、体型分级、战斗结算、AI 词表与 prompt、发帖校验与分页… |
+| 模型库体检 | `npm run check:assets` | 每只宠物的 GLB 是否存在、带骨骼、idle/walk/run 能落位、面数与体积在预算内 |
+| 浏览器冒烟 | `npm run test:smoke` | jsdom 真跑 bundle：登录→首页→世界→3D 降级→面板七个 tab→互动→事件卡→逐页渲染→存档 |
 | 数值平衡 | `node dev/balance.mjs` | 打架胜率曲线（三档成长 vs 八个对手），改数值后跑一次看曲线是否合理 |
 
 为了让领域可测，`clock.now()` 与 `persistence.storage` 都是可替换的端口：
@@ -181,9 +195,9 @@ llm.chat({ pet, question, scene, prompt, messages, onDelta, signal })
 | `01-data.js`（含迁移脚本） | `data/seed.js` + `data/migrations.js` |
 | `02-core.js` | `views/auth.js` + `app/router.js` |
 | `03-petsvg.js` | `views/pets.js`（SVG 生成 + 当前宠物） |
-| `10…19-*.js` | `views/home|ai|community|profile|grow|monitor|mall|misc|service|act.js` |
+| `10…19-*.js` | `views/home\|ai\|community\|profile\|grow\|monitor\|mall\|misc\|service\|act.js` |
 | `20-world.js` | `data/world-tables.js` + `domain/world.js` + `views/world-state.js` + `views/world-panel.js` |
 | `21-petwiz.js` / `22-live.js` | `views/petwizard.js` / `views/live.js` |
-| `30-w3d.js`（611 行） | `domain/w3d.js` + `views/w3d/` 十个小模块 |
+| `30-w3d.js`（611 行） | `domain/w3d.js` + `views/w3d/` 十五个小模块 |
 | `99-boot.js` | `src/main.js` |
 | `dev/test-w3d.js`（eval 拼接源码） | `dev/test/*.test.js`（直接 import 领域模块） |

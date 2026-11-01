@@ -10,7 +10,7 @@ export const STORAGE_KEY = 'pet_butler_demo_v1';
 export const SCHEMA_VERSION = 3;
 
 export const APP_NAME = '宠物数字管家';
-export const APP_VERSION = 'V1.10.0';
+export const APP_VERSION = 'V1.10.1';
 
 /** 世界成长：每 50 成长值 1 级，1–100 级。 */
 export const GROWTH_PER_LEVEL = 50;

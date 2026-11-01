@@ -11,7 +11,7 @@ import { RTYPES, recCard, rmDays } from './records.js';
 import { needNet } from './../app/shell.js';
 import { registerPage } from './../app/router.js';
 import { breedRefOf } from './../data/pet-sizes.js';
-import { sizeSummaryOf, bcsOf, growthStageOf } from './../domain/pet.js';
+import { sizeSummaryOf, growthStageOf, heightDeviation } from './../domain/pet.js';
 function renderMe(){
   const ent=[
     ['我的宠物','i-paw','#E8945A','go(\'profile\')'],
@@ -178,6 +178,9 @@ function petSizeLine(p){
   const s=sizeSummaryOf(p);
   if(s)bits.push(s);
   if(p.height)bits.push('肩高'+p.height+'cm');
+  // 身高偏差只在与品种标准差得多时才提示，避免档案卡堆字
+  const hd=heightDeviation(p);
+  if(hd&&hd.label!=='标准')bits.push(hd.label+Math.abs(hd.diff)+'cm');
   const stage=growthStageOf(p);
   if(stage&&stage!=='未知')bits.push(stage);
   return bits.join(' · ');
@@ -186,7 +189,8 @@ function renderPetEdit(){
   const p=S.pets.find(x=>x.id===ui.profileEditingPetId)||{species:'猫',gender:'弟弟',neuter:'未绝育'};
   const opt=(k,vals,cur)=>vals.map(v=>'<button class="skuBtn'+(v===cur?' act':'')+'" data-g="'+k+'" data-v="'+v+'" onclick="document.querySelectorAll(\'[data-g=' + k + ']\').forEach(b=>b.classList.remove(\'act\'));this.classList.add(\'act\')">'+v+'</button>').join('');
   const ref=breedRefOf(p.breed,p.species);
-  const refHint=ref?('<div style="font-size:10.5px;color:#8FA8C9;margin:-4px 0 10px;line-height:1.6">「'+esc(p.breed)+'」参考区间：体重 '+(ref.weight[0]??'—')+'~'+(ref.weight[1]??'—')+'kg · 肩高 '+ref.height[0]+'~'+ref.height[1]+'cm'+(ref.group?' · '+esc(ref.group):'')+'<br>体型类型按当前体重自动判定</div>'):'';
+  const refNote=p.species==='猫'?'参考区间（人工整理）':'参考区间（AKC 2020）';
+  const refHint=ref?('<div style="font-size:10.5px;color:#8FA8C9;margin:-4px 0 10px;line-height:1.6">「'+esc(p.breed)+'」'+refNote+'：体重 '+(ref.weight[0]??'—')+'~'+(ref.weight[1]??'—')+'kg · 肩高 '+ref.height[0]+'~'+ref.height[1]+'cm'+(ref.group?' · '+esc(ref.group):'')+'<br>体型类型按当前体重自动判定，不落盘；你手选的只有体格</div>'):'';
   $('petedit-body').innerHTML=
   '<div class="subhdr"><svg class="icon" style="cursor:pointer" onclick="app.go(\'profile\')"><use href="#i-back"/></svg><b style="font-size:15px">'+(ui.profileEditingPetId?'编辑':'新建')+'宠物档案</b><span style="margin-left:auto"></span></div>'+
   '<div style="padding:16px">'+

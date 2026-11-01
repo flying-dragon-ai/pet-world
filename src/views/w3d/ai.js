@@ -7,6 +7,10 @@
  *
  * V1.10：行为决策与台词对齐《虚拟宠物家园》2D 小游戏的 idleBehavior()，
  * 规则（阈值、性格判定）在 domain/w3d.js，这里只负责把决策翻译成舞台动作。
+ *
+ * 多宠互动类状态（对齐 PRD §3.2 / wheels 调研 §2.3）：fight（打完架对峙）、
+ * hurt（带伤）、lick（舔毛理毛）。lick 的触发是「清洁度偏低 + 空闲」，
+ * 复用 idle 的动画通道，不依赖新的骨骼 clip。
  */
 import { worldPet } from '../world-state.js';
 import { now } from '../../app/clock.js';
@@ -19,6 +23,8 @@ import { CUSHION_POS, DOOR_POS } from './scene.js';
 
 /** 打完架之后，在 3D 里摆出对应姿态的持续时间（毫秒） */
 const BATTLE_POSE_MS = 15000;
+/** 清洁度低于该值时，空闲会自己舔毛（多宠互动/自我梳理状态） */
+const LICK_CLEAN_BELOW = 35;
 
 export const AI = {
   idle: 'idle',
@@ -30,6 +36,7 @@ export const AI = {
   sleep: 'sleep',
   fight: 'fight',
   hurt: 'hurt',
+  lick: 'lick',
   wag: 'wag',
   nod: 'nod',
   lie: 'lie',
@@ -84,6 +91,10 @@ export function tickAi(dt) {
         } else if (sleepy) {
           ai.state = 'sleep';
           ai.t = 8 + Math.random() * 4;
+        } else if (attr.clean < LICK_CLEAN_BELOW && Math.random() < 0.55) {
+          // 脏了就低头舔毛：多宠互动里的「舔毛/理毛」状态
+          ai.state = 'lick';
+          ai.t = 4 + Math.random() * 2.5;
         } else {
           startBehavior(s, pickIdle({ attr, traits, roll: Math.random(), rain: raining }), traits);
         }
@@ -112,6 +123,21 @@ export function tickAi(dt) {
       if (ai.t <= 0) {
         ai.state = 'idle';
         ai.t = 3;
+      }
+      break;
+    }
+
+    case 'lick': {
+      // 舔毛/理毛：低头小幅摆动，循环到 ai.t 结束（用 idle clip 缩放，不新增骨骼动画）
+      resetPose(pet);
+      playAnim('idle', 0.55);
+      const t = s.clock.elapsedTime;
+      pet.position.y = 0;
+      pet.rotation.x = 0.08 + Math.abs(Math.sin(t * 2.4)) * 0.06;
+      if (ai.t <= 0) {
+        pet.rotation.x = 0;
+        ai.state = 'idle';
+        ai.t = 2.5 + Math.random() * 2;
       }
       break;
     }
@@ -347,6 +373,8 @@ function animateFallback(s, ai, happy) {
   let headZ = 0.45;
   if (ai.state === 'nod') headZ = 0.45 - Math.abs(Math.sin(t * 4)) * 0.12;
   if (ai.state === 'eat') headZ = 0.45 - Math.abs(Math.sin(t * 6)) * 0.16;
+  // 舔毛：头低下去小幅来回（猫舔前爪的幅度）
+  if (ai.state === 'lick') headZ = 0.45 - Math.abs(Math.sin(t * 3.6)) * 0.14;
   if (ai.state === 'lie') headY = 0.86;
   parts.head.position.y = headY;
   parts.head.position.z = headZ;
@@ -417,6 +445,7 @@ export function autoBubble() {
   if (state === 'shelter' || state === 'walkShelter') return '🌧 躲雨中…';
   if (state === 'fight') return '汪！来啊！';
   if (state === 'hurt') return '呜…还疼…';
+  if (state === 'lick') return '舔舔…今天有点脏';
 
   const slot = Math.floor(s.clock.elapsedTime / 2.4);
   if (attr.hunger < 30) return ['肚子咕咕叫了…', '想吃饭饭', '饿了，没力气跑'][slot % 3];

@@ -11,7 +11,7 @@
 import { S, save } from '../app/store.js';
 import { now } from '../app/clock.js';
 import { esc } from '../app/dom.js';
-import { openModal } from '../app/ui.js';
+import { openModal, toast } from '../app/ui.js';
 import { registerActions } from '../app/actions.js';
 import { VENUE_UNLOCK_LEVEL } from '../app/config.js';
 import {

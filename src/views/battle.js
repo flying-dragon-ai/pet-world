@@ -14,7 +14,7 @@ import { openModal, closeModal, openSheet, closeSheet, toast } from './../app/ui
 import { now } from './../app/clock.js';
 import { curPet } from './pets.js';
 import { worldPet, worldLevel, payAndGain, earnCoins, registerWorldHooks } from './world-state.js';
-import { resolveBattle, battleStats, foeStats, makeRng, injuryOf, rewardOf } from './../domain/battle.js';
+import { resolveBattle, battleStats, foeStats, makeRng, injuryOf, settleOf } from './../domain/battle.js';
 import { BATTLE_FOES, FOE_BY_ID, BATTLE_INJURY, BATTLE_RESULT_TITLE } from './../data/battle-tables.js';
 import { sizeTypeOf } from './../domain/pet.js';
 
@@ -79,6 +79,7 @@ function openBattlePicker() {
 
 /**
  * 打完一场：算结果 → 落盘 → 出战报卡。
+ * 伤害/负伤/奖励全是 domain 的纯函数，这里只把结果摞到存档上。
  * @param {object} foe 对手配置
  * @param {object} [opts] { medalId, medal, eventId }
  */
@@ -89,18 +90,18 @@ function runBattle(foe, opts) {
   const rng = makeRng(seedFor(p.id, foe.id));
   const result = resolveBattle({ mine, foe: fs, rng });
   const injury = injuryOf(result, rng);
-  const reward = rewardOf(result);
-  const inj = BATTLE_INJURY[injury];
+  const settle = settleOf(result, injury);
+  const inj = BATTLE_INJURY[settle.injury];
 
-  const cost = { stamina: BASE_STAMINA_COST + (inj.cost.stamina || 0), mood: inj.cost.mood || 0 };
-  const gain = { growth: reward.growth };
-  if (result.outcome === 'win') gain.mood = 6;
+  // 出门固定体力底价 + 负伤成本（负伤部分严格取自 BATTLE_INJURY）
+  const cost = { stamina: BASE_STAMINA_COST + (settle.cost.stamina || 0), mood: settle.cost.mood || 0 };
+  const gain = settle.gain;
 
-  // 记录战绩
+  // 记录战绩（负伤也存，3D 姿态与战绩卡都读这份）
   const w = worldPet();
   w.battle = w.battle || { win: 0, draw: 0, lose: 0, last: null };
   w.battle[result.outcome]++;
-  w.battle.last = { foe: foe.n, outcome: result.outcome, at: now() };
+  w.battle.last = { foe: foe.n, outcome: result.outcome, injury: settle.injury, at: now() };
 
   // 事件触发的战斗：应战即视为事件已触发（无论输赢都不再重复弹）
   if (opts && opts.eventId) {
@@ -114,10 +115,10 @@ function runBattle(foe, opts) {
     gotMedal = opts.medal;
   }
 
-  payAndGain(cost, gain, () => { earnCoins(reward.coinA); });
+  payAndGain(cost, gain, () => { earnCoins(settle.coinA); });
   save();
 
-  showResultCard({ foe, mine, fs, result, injury, inj, reward, gotMedal, cost });
+  showResultCard({ foe, mine, fs, result, inj, reward: settle, gotMedal, cost });
 }
 
 function showResultCard(o) {
@@ -125,9 +126,8 @@ function showResultCard(o) {
   const title = BATTLE_RESULT_TITLE[result.outcome] || '战斗结束';
   const color = result.outcome === 'win' ? '#3BB786' : result.outcome === 'lose' ? '#F05B5B' : '#E8A23A';
   const rounds = result.log.map((l) => {
-    const who = l.side === 'me' ? '我方' : esc(foe.n);
     return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid rgba(0,0,0,.04)">' +
-      '<span style="color:' + (l.side === 'me' ? '#3A7BD5' : '#F05B5B') + '">' + (l.side === 'me' ? '我方' : foe.n) + '</span>' +
+      '<span style="color:' + (l.side === 'me' ? '#3A7BD5' : '#F05B5B') + '">' + (l.side === 'me' ? '我方' : esc(foe.n)) + '</span>' +
       '<span>造成 ' + l.dmg + ' 伤害 · 剩余 ' + l.left + '</span></div>';
   }).join('');
   openModal(
@@ -181,13 +181,15 @@ export function showBattlePrompt(ev) {
     '</div>');
 }
 
-/** 应战：按攻击值挑一个势均力敌的对手 */
+/** 应战：按攻击值挑一个势均力敌的对手（用当天 seed 选，同一天重进不会换人） */
 function acceptStreetFight() {
   closeModal();
   const w = worldPet();
   const aggression = w.aggression || 30;
   const pool = BATTLE_FOES.filter((f) => Math.abs(f.atk - aggression) < 26);
-  const foe = pool.length ? pool[Math.floor(Math.random() * pool.length)] : BATTLE_FOES[0];
+  const list = pool.length ? pool : BATTLE_FOES;
+  const rng = makeRng(seedFor(curPet().id, 'streetfight'));
+  const foe = list[Math.floor(rng() * list.length) % list.length];
   runBattle(foe, { eventId: 'streetfight', medal: { id: 'streetfight', n: '街头硬汉', ic: '🥊', d: '冲动值与攻击值同时>60%时触发「街头大战」事件，打赢可得' } });
 }
 
@@ -217,7 +219,8 @@ function openBattleRecord() {
     '<div style="font-size:11.5px;color:var(--sub);line-height:1.8">' +
       '当前体型：' + (sizeTypeOf(curPet()) || '—') + ' · 面板 攻' + mine.atk + ' 防' + mine.def + ' 速' + mine.spd + ' 体力' + mine.hp + '<br>' +
       '累计出战 ' + total + ' 场' +
-      (b.last ? '<br>最近一场：' + esc(b.last.foe) + ' · ' + (BATTLE_RESULT_TITLE[b.last.outcome] || b.last.outcome) : '') +
+      (b.last ? '<br>最近一场：' + esc(b.last.foe) + ' · ' + (BATTLE_RESULT_TITLE[b.last.outcome] || b.last.outcome) +
+        (b.last.injury ? ' · ' + (BATTLE_INJURY[b.last.injury] ? BATTLE_INJURY[b.last.injury].ic + ' ' + BATTLE_INJURY[b.last.injury].n : b.last.injury) : '') : '') +
       '<br><span style="color:#C77E12">提示：冲动值与攻击值同时拉过 60%，回家路上会触发「街头大战」事件。</span>' +
     '</div>');
 }

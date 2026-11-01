@@ -1,6 +1,6 @@
 import { registerActions } from './../app/actions.js';
 import { today } from './../app/clock.js';
-import { $, esc, mdToHtml, uid } from './../app/dom.js';
+import { $, $$, esc, jsArg, mdToHtml, uid } from './../app/dom.js';
 import { go } from './../app/router.js';
 import { S, save } from './../app/store.js';
 import { openSheet, toast } from './../app/ui.js';
@@ -10,6 +10,7 @@ import { shopPicks } from './mall.js';
 import { needNet } from './../app/shell.js';
 import { registerPage } from './../app/router.js';
 import { closeSheet } from './../app/ui.js';
+import { ui } from './../app/ui-state.js';
 import * as llm from './../app/llm.js';
 import { AI_SCENES, isRiskQuestion, isEmergency, buildSystemPrompt, composeMessages, sceneOf } from './../domain/ai-prompt.js';
 import { localGreeting, localRefusal } from './../domain/ai-local.js';
@@ -111,8 +112,7 @@ function openSessions(){
 }
 
 /* ---- 对话状态（V1.5：AI主Tab即聊天页） ---- */
-let CH={sess:null,scene:'ask',msgs:[],stream:null,emgShown:false,active:false,abort:null};
-function newChat(scene,pre){const s={id:uid(),scene,title:'',last:'',msgs:[],ts:Date.now()};S.aiSess.unshift(s);if(S.aiSess.length>50)S.aiSess.pop();return s}
+let CH={sess:null,scene:'ask',msgs:[],stream:null,emgShown:false,active:false,abort:null};function newChat(scene,pre){const s={id:uid(),scene,title:'',last:'',msgs:[],ts:Date.now()};S.aiSess.unshift(s);if(S.aiSess.length>50)S.aiSess.pop();return s}
 function openChat(scene,pre){
   CH.scene=scene;
   let s=S.aiSess.find(x=>x.scene===scene&&x.msgs.length===0);
@@ -133,9 +133,10 @@ function renderMsgs(){
     if(m.r==='me')return '<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><div style="max-width:78%;background:linear-gradient(135deg,#5B8DEF,#3A7BD5);color:#fff;padding:10px 14px;border-radius:16px 16px 4px 16px;font-size:13.5px;line-height:1.6">'+esc(m.t)+'</div></div>';
     if(m.r==='cards')return '<div class="msg-ai" style="margin:0 0 12px 38px"><div style="font-size:11px;color:var(--sub);margin-bottom:6px">结合档案为你挑选，可直接下单：</div>'+m.items.map(it=>'<div class="card" style="display:flex;gap:9px;padding:9px;margin-bottom:8px;align-items:center"><div style="width:44px;height:44px;border-radius:11px;overflow:hidden;flex:none"><img src="'+it.img+'" style="width:100%;height:100%;object-fit:cover" onerror="app.imgErr(this)"></div><div style="flex:1;min-width:0"><div style="font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+it.name+'</div><div style="color:var(--danger);font-weight:800;font-size:12.5px;margin-top:1px">¥'+it.price+'</div></div><div style="display:flex;flex-direction:column;gap:4px;flex:none"><button class="btn btn-sm btn-ghost" style="padding:3px 10px;font-size:10.5px" onclick="app.addCartById(\''+it.id+'\')">加购</button><button class="btn btn-sm" style="padding:3px 10px;font-size:10.5px" onclick="app.quickBuy(\''+it.id+'\')">购买</button></div></div>').join('')+'</div>';
     if(m.emg)return '<div class="emg" style="margin-bottom:12px"><div style="display:flex;align-items:center;gap:7px;color:#D94343;font-weight:900;font-size:14px"><svg class="icon"><use href="#i-alert"/></svg>急诊提示</div><div style="font-size:12.5px;line-height:1.7;margin-top:6px">'+m.t+'</div></div>';
-    const fb=m.fb!==undefined?'<div style="display:flex;gap:14px;margin-top:8px;align-items:center"><span style="font-size:10.5px;color:var(--sub)">'+(m.stop?'已停止生成':'这条回答有帮助吗')+'</span><span style="cursor:pointer" onclick="app.fbMsg(\''+m.id+'\',1)"><svg class="icon icon-s" style="color:'+(m.fb===1?'#4CA876':'#B9C4D2')+'"><use href="#i-heart"/></svg></span><span style="cursor:pointer" onclick="app.fbMsg(\''+m.id+'\',0)"><svg class="icon icon-s" style="color:'+(m.fb===0?'#F05B5B':'#B9C4D2')+'"><use href="#i-x"/></svg></span>'+(m.fb===0?'<span class="chip" style="font-size:9px">已归档badcase，可继续追问</span>':'')+'</div>':'';
+    const fb=m.fb!==undefined?'<div style="display:flex;gap:14px;margin-top:8px;align-items:center"><span style="font-size:10.5px;color:var(--sub)">'+(m.err?'生成中断，请重试':(m.stop?'已停止生成':'这条回答有帮助吗'))+'</span><span style="cursor:pointer" onclick="app.fbMsg('+jsArg(m.id)+',1)"><svg class="icon icon-s" style="color:'+(m.fb===1?'#4CA876':'#B9C4D2')+'"><use href="#i-heart"/></svg></span><span style="cursor:pointer" onclick="app.fbMsg('+jsArg(m.id)+',0)"><svg class="icon icon-s" style="color:'+(m.fb===0?'#F05B5B':'#B9C4D2')+'"><use href="#i-x"/></svg></span>'+(m.fb===0?'<span class="chip" style="font-size:9px">已归档badcase，可继续追问</span>':'')+'</div>':'';
     const sceneTag='<span style="font-size:9px;padding:1px 7px;border-radius:6px;background:'+scn(CH.scene).c+'1a;color:'+scn(CH.scene).c+';margin-left:6px">'+scn(CH.scene).n+'</span>';
-    return '<div class="msg-ai" style="display:flex;gap:8px;margin-bottom:12px"><div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#8FB6EE,#3A7BD5);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:#fff"><use href="#i-spark"/></svg></div><div style="max-width:82%"><div style="background:rgba(255,255,255,.75);padding:10px 13px;border-radius:4px 16px 16px 16px;font-size:13px;line-height:1.65" class="qTxt">'+mdToHtml(m.t)+(m.stop?'<span style="color:#A8B2BE;font-size:11px">（回答已停止）</span>':'')+'</div>'+fb+'</div></div>';
+    const endTag=m.err?'<span style="color:#D94343;font-size:11px">（生成中断，请重试）</span>':(m.stop?'<span style="color:#A8B2BE;font-size:11px">（回答已停止）</span>':'');
+    return '<div class="msg-ai" style="display:flex;gap:8px;margin-bottom:12px"><div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#8FB6EE,#3A7BD5);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:#fff"><use href="#i-spark"/></svg></div><div style="max-width:82%"><div style="background:rgba(255,255,255,.75);padding:10px 13px;border-radius:4px 16px 16px 16px;font-size:13px;line-height:1.65" class="qTxt">'+mdToHtml(m.t)+endTag+'</div>'+fb+'</div></div>';
   }).join('');
   box.scrollTop=box.scrollHeight;
 }
@@ -143,6 +144,7 @@ function fbMsg(id,v){const m=CH.msgs.find(x=>x.id===id);if(!m)return;m.fb=v;CH.s
 function sendMsg(){
   const inp=$('chatIn');const q=(inp&&inp.value||'').trim();
   if(!q){toast('请输入问题');return}
+  if(CH.stream){toast('正在生成，请先点「停止生成」');return}
   if(!needNet())return;
   const ensureActive=()=>{if(!CH.active||!CH.sess){CH.sess=newChat(CH.scene);CH.msgs=CH.sess.msgs;CH.active=true}};
   if(isRiskQuestion(q)){
@@ -163,20 +165,38 @@ function sendMsg(){
 /**
  * 流式回复：数据来源是 app/llm.js 这个端口（现在是本地语料，将来换真模型只改端口）。
  * 视图只负责「把增量显示出来」，不关心内容从哪来。
+ *
+ * 三条收尾底线：
+ *   1. 停止生成 = AbortController.abort()（不是 clearInterval），abort 之后一个字都不再追加；
+ *   2. 不管成功、超时、上游报错还是中断，「正在输入」那个气泡一定会被拆掉，不会卡死；
+ *   3. llm 返回带 code 的失败结果时，保留已生成的部分 + 给一句人话提示。
  */
+const ERR_TIP={timeout:'模型响应超时，已保留已生成内容，请重试',upstream:'模型服务暂时不可用，请稍后重试',parse:'返回内容解析失败，请重试',aborted:''};
 function streamReply(q){
   const m={r:'ai',id:uid(),t:'',ts:Date.now()};
   CH.msgs.push(m);
   const box=$('chatMsgs');
-  box.insertAdjacentHTML('beforeend','<div id="streaming" style="display:flex;gap:8px;margin-bottom:12px"><div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#8FB6EE,#3A7BD5);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:#fff"><use href="#i-spark"/></svg></div><div style="max-width:82%"><div id="stTxt" style="background:rgba(255,255,255,.75);padding:10px 13px;border-radius:4px 16px 16px 16px;font-size:13px;line-height:1.65" class="qTxt"></div><div style="display:flex;justify-content:center;margin-top:6px"><button class="btn btn-sm btn-ghost" id="stopBtn" onclick="app.stopGen()"><svg class="icon icon-s"><use href="#i-stop"/></svg> 停止生成</button></div></div></div>');
+  const bid='stream-'+m.id,tid='st-'+m.id;
+  box.insertAdjacentHTML('beforeend','<div id="'+bid+'" class="stream-bubble" style="display:flex;gap:8px;margin-bottom:12px"><div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#8FB6EE,#3A7BD5);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:#fff"><use href="#i-spark"/></svg></div><div style="max-width:82%"><div id="'+tid+'" style="background:rgba(255,255,255,.75);padding:10px 13px;border-radius:4px 16px 16px 16px;font-size:13px;line-height:1.65" class="qTxt"><span style="opacity:.4">思考中…</span></div><div style="display:flex;justify-content:center;margin-top:6px"><button class="btn btn-sm btn-ghost" id="stopBtn" onclick="app.stopGen()"><svg class="icon icon-s"><use href="#i-stop"/></svg> 停止生成</button></div></div></div>');
   box.scrollTop=box.scrollHeight;
-  $('sendBtn').disabled=true;
+  const sb=$('sendBtn');if(sb)sb.disabled=true;
 
   const pet=ctxPet();
   const prompt=buildSystemPrompt(pet,CH.scene);
   const messages=composeMessages(CH.msgs.slice(0,-1),prompt);
   const ac=new AbortController();
-  CH.abort=ac;
+  // stream 是这一条流的开关：abort / 收尾之后一律不再写 DOM，也不会写错到下一条流上
+  const st={id:m.id,ac,dead:false};
+  CH.abort=ac;CH.stream=st;
+
+  const paint=(text)=>{
+    m.t=text;
+    const el=$(tid);
+    if(el)el.innerHTML=mdToHtml(text)+'<span style="opacity:.4">▍</span>';
+    box.scrollTop=box.scrollHeight;
+  };
+  const alive=()=>CH.stream===st&&!st.dead;
+  const settle=()=>{if(CH.stream===st)CH.stream=null;if(CH.abort===ac)CH.abort=null;st.dead=true};
 
   llm.chat({
     pet,
@@ -185,13 +205,20 @@ function streamReply(q){
     prompt,
     messages,
     signal:ac.signal,
-    onDelta:(delta)=>{
-      m.t=delta;
-      const st=$('stTxt');
-      if(st){st.innerHTML=mdToHtml(delta)+'<span style="opacity:.4">▍</span>';box.scrollTop=box.scrollHeight;}
-    },
+    retries:1,
+    onDelta:(text)=>{if(!alive())return;paint(text)},
   }).then((res)=>{
-    CH.abort=null;
+    if(!alive())return;
+    settle();
+    if(res&&res.ok===false){
+      // 失败：保留已生成部分，清指示，按错误码给人话；aborted 是用户自己按的，不报错
+      m.t=res.text||m.t||'（这次没有生成内容）';
+      m.stop=true;m.err=res.code;
+      finishStream();
+      const tip=ERR_TIP[res.code];
+      if(tip)toast(tip);
+      return;
+    }
     m.t=res.text||m.t;
     if(res.reason==='emergency'){m.t='（内容已中止）';m.stop=false;showEmg();}
     else if(res.stopped){m.stop=true;}
@@ -200,20 +227,29 @@ function streamReply(q){
       const picks=shopPicks();if(picks.length){CH.msgs.push({r:'cards',items:picks});saveSess();renderMsgs();}
     }
   }).catch(()=>{
-    CH.abort=null;
+    if(!alive())return;
+    settle();
+    m.t=m.t||'（这次没有生成内容）';m.stop=true;m.err='upstream';
     finishStream();
     toast('生成失败，请重试');
   });
 }
+/** 收尾：拆掉「正在输入」气泡、恢复发送键、落盘重渲染 */
 function finishStream(){
-  const el=$('streaming');if(el)el.remove();
-  $('sendBtn').disabled=false;
-  saveSess();renderMsgs();
+  $$('.stream-bubble').forEach((el)=>el.remove());
+  const sb=$('sendBtn');if(sb)sb.disabled=false;
+  renderMsgs();
+  if(CH.sess)saveSess();
 }
 function stopGen(){
-  if(CH.abort){CH.abort.abort();CH.abort=null;}
-  const m=CH.msgs[CH.msgs.length-1];
-  if(m&&m.r==='ai'&&m.t)m.stop=true;
+  const st=CH.stream;
+  if(!st){return}
+  st.dead=true;
+  CH.stream=null;
+  CH.abort=null;
+  try{st.ac.abort()}catch(e){}
+  const m=CH.msgs.find(x=>x.id===st.id);
+  if(m){m.stop=true;if(!m.t)m.t='（这次没有生成内容）'}
   finishStream();
   toast('已停止生成：已输出内容保留，不扣减重新生成次数');
 }

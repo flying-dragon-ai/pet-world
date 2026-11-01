@@ -14,7 +14,7 @@
 
 ## 0. 背景
 
-项目路径：`D:/temp/宠物世界`（git 仓库，分支未提交状态）。
+项目路径：`D:/temp/宠物世界`（git 仓库，工作区带未提交改动；基线提交 `50e18d8`，其上另有一个文档提交 `9909910`）。
 这是一个黑客松 Demo：竖屏 App 内嵌横屏 three.js 3D 宠物世界，纯静态托管在 GitHub Pages，
 **零运行时依赖**，只有 devDependency `jsdom`（测试用）。打包器是自研的 `dev/build.js`（零依赖）。
 
@@ -41,9 +41,9 @@ npm run check          # 静态体检 + 领域单测 + 构建 + jsdom 冒烟，�
 
 | 命令 | 作用 | 当前结果 |
 |---|---|---|
-| `npm run check:static` | import 路径 / 循环依赖 / 动作契约静态校验 | CHECK ALL GREEN（61 模块 · 267 动作注册 · 199 动作引用） |
-| `npm test` | 领域单测（node --test） | **95 项全过** |
-| `npm run test:smoke` | 构建 + jsdom 浏览器级冒烟 | **86 项全过**，bundle.js 668 KB / 61 模块 |
+| `npm run check:static` | import 路径 / 循环依赖 / 动作契约静态校验 | CHECK ALL GREEN（模块数 / 动作数看输出首行，**不写死**） |
+| `npm test` | 领域单测（node --test） | **0 失败**（条数以 `npm test` 输出为准） |
+| `npm run test:smoke` | 构建 + jsdom 浏览器级冒烟 | **0 失败**（条数与 bundle 体积看 `npm run test:smoke` 输出） |
 | `node dev/balance.mjs` | 打架胜率平衡模拟（三档成长 × 8 对手） | 曲线符合设计预期 |
 | `node dev/gen-pet-sizes.js` | 从 AKC 公开数据集重生成犬种体型表 | 276 个犬种 |
 
@@ -77,7 +77,8 @@ npm run check          # 静态体检 + 领域单测 + 构建 + jsdom 冒烟，�
     该块由 `node dev/gen-pet-sizes.js` 从 <https://raw.githubusercontent.com/tmfilho/akcdata/master/data/akc-data-latest.csv>
     （MIT）自动生成，文件内有 `AUTO-GEN` 标记块，**重新生成时不要手工改块内内容**。
   - `CAT_SIZES`：29 个猫品种（人工维护，同格式数组）。
-  - `BREED_ALIAS`：中文品种名 → AKC 英文名，覆盖约 80 条（用于建档时中文输入匹配）。
+  - `BREED_ALIAS`：中文品种名 → AKC 英文名（用于建档时中文输入匹配）。当前采集为 94 条键，
+    条数以 `node -e "...Object.keys(BREED_ALIAS).length"` 读 `src/data/pet-sizes.js` 为准。
   - `SIZE_SCALE`：犬 迷你<4kg / 小型4-12 / 中型12-25 / 大型25-45 / 巨型≥45；猫 小型<4 / 中型4-6 / 大型≥6。
   - `BCS_LABELS`：体况评分文案。
   - 导出 `breedKeyOf(breed)` 与 `breedRefOf(breed, species)` —— **放在 data 层是因为 data 不得依赖 domain**。
@@ -96,7 +97,7 @@ npm run check          # 静态体检 + 领域单测 + 构建 + jsdom 冒烟，�
      用户手选的只有「体格 build」。
   2. **BCS 是近似估算**：按体重与品种标准中点线性映射（ratio 0.75→3 分，1.00→5 分，1.25→7 分）。
      UI 与注释里已标明「不替代兽医触诊」。
-- **测试**：`dev/test/pet.test.js`（含本功能 11 项）
+- **测试**：`dev/test/pet.test.js`（`node --test dev/test/pet.test.js`，当前采集 15 项 / 0 失败）
 
 ### 3.2 宠物出门打架（家园系统里的「宠物出门打架」）
 
@@ -121,9 +122,13 @@ npm run check          # 静态体检 + 领域单测 + 构建 + jsdom 冒烟，�
 - **3D 表现** `src/views/w3d/ai.js`：AI 状态新增 `fight` / `hurt`；`battlePose()` 读 `w.battle.last`
   （15 分钟内有效）决定「打赢昂首 / 战败带伤」；气泡文案「汪！来啊！」/「呜…还疼…」。
 - **去重口径**：用 `world.firedEvents` 数组去重（不是勋章），这样「回避」后不再重复弹窗；**勋章只在打赢时发放**。
-- **平衡**（`node dev/balance.mjs` 当前曲线）：新手 Lv1 胜前 5 负后 3；中期 Lv20 胜前 5、边牧 56%；
-  毕业 Lv60 胜前 7、最终 BOSS「流浪金毛」100% 负（**故意设计成一道墙**）。
-- **测试**：`dev/test/battle.test.js`（14 项）
+- **平衡（设计意图）**：新手 Lv1 只胜前 5 个、负后 3 个；中期 Lv20 胜前 5、边牧 56%；
+  毕业 Lv60 胜前 7，最终 BOSS「流浪金毛」故意设计成一道墙。
+- ⚠️ **这条现在是红的**：2026-11-01 10:09 实测 `node dev/balance.mjs`，Lv60 对「流浪金毛」**胜 94%**，
+  墙已被抹平（面板 `spd` 同时从 50 漂到 65，怀疑是并行改 `src/domain/battle.js` 时带进来的）。
+  接手的人先跑一次该命令，再决定是「调回设计意图」还是「接受新曲线并改规格」，
+  回执与数字见 `docs/DELIVERY-V1.10.md` 第三节第 2 条。
+- **测试**：`dev/test/battle.test.js`（`node --test dev/test/battle.test.js`，当前采集 14 项 / 0 失败）
 - **一条已定的取舍**：**不引入物理引擎**（cannon-es 346KB / matter-js 更重）。
   PRD §4.8 的落点是「弹窗文字 + 图片结算」，参考旅行青蛙；3D 只做姿态表现，不做真实物理。
 
@@ -148,7 +153,7 @@ npm run check          # 静态体检 + 领域单测 + 构建 + jsdom 冒烟，�
   AI 消息渲染改 `mdToHtml`；`aiGreet` 改用 `localGreeting`。原有的本地 `SCENES` / `EMG_KW` / `RISK_KW` / `aiReply` 已删除。
 - **一条已定的取舍**：**这一轮不接真 LLM API**。纯静态 GitHub Pages 撑不住服务端代理，
   且 API Key 不能进前端。所以先把 `app/llm.js` 端口化留好接口，本地语料作为默认后端（离线可演示）。
-- **测试**：`dev/test/ai-prompt.test.js`（11 项）
+- **测试**：`dev/test/ai-prompt.test.js`（`node --test dev/test/ai-prompt.test.js`，当前采集 11 项 / 0 失败）
 
 ### 3.4 社区发帖增强
 
@@ -164,17 +169,21 @@ npm run check          # 静态体检 + 领域单测 + 构建 + jsdom 冒烟，�
 - **UI 状态** `src/app/ui-state.js`：`ui.publish` 增加 `preview`；`ui.community` 增加 `page`。
 - **一条已定的取舍**：**不抄 EasyMDE / CodeMirror**（合计 501 KB，太重），
   用 textarea + Markdown 预览；也**没有引入 `browser-image-compression`**（省 57 KB vendor，逻辑仅约 30 行）。
-- **测试**：`dev/test/post.test.js`（9 项）
+- **测试**：`dev/test/post.test.js`（`node --test dev/test/post.test.js`，当前采集 9 项 / 0 失败）
 
 ## 4. 已完成到哪一步（**不要重做**）
 
 四个功能全部实现完毕，当前基线是绿的：
 
 ```
-npm run check:static  → CHECK ALL GREEN（61 模块 / 267 动作注册 / 199 动作引用）
-npm test              → 95 项全过（其中本轮四个功能新增 46 项）
-npm run test:smoke    → 86 项全过（bundle.js 668 KB / 61 模块）
+npm run check:static  → CHECK ALL GREEN（模块数 / 注册动作 / 引用动作看输出首行）
+npm test              → 0 失败（条数以输出为准）
+npm run test:smoke    → 0 失败（条数 / bundle 体积看输出）
 ```
+
+> 本文**不写死条数**：仓库常年有多个 Agent 并行加测试，写死的数字必然过时。
+> 带采集时间与来源命令的硬数字快照统一记在 [`README.md` 的「硬数字」表](../README.md#硬数字实测快照)，
+> 交付回执记在 [`docs/DELIVERY-V1.10.md`](DELIVERY-V1.10.md)。
 
 版本号已统一升到 **V1.10.0**：`package.json`（1.10.0）、`src/app/config.js`（`APP_VERSION`）、
 `index.html`（title + 页脚两处）、`src/main.js`（`window.__petWorld.version`）、`README.md`。
@@ -186,8 +195,15 @@ npm run test:smoke    → 86 项全过（bundle.js 668 KB / 61 模块）
 
 ### P0 —— 拆分提交（如果需要拆得漂亮的话）
 
-**状态更新：工作区已经整理干净并落库了 —— 基线提交 `50e18d8`，已验证全绿。**
-所以 P0 从「抢救未提交的改动」降级成「可选的美化动作」。
+**状态（2026-11-01 10:00 采集，`git status --porcelain` 实况）：**
+
+- 与基线 `50e18d8` 相比，仓库上只多了一个文档提交 `9909910`（`docs: 交接提示词更新到基线提交 50e18d8`）；
+- 但**工作区并不干净**：16 个已跟踪文件被改动 + 30 个未跟踪条目（含 `assets/models/pets/*.glb`、
+  `dev/check-assets.js`、`dev/test/w3d-assets.test.js` 等），来自当时并行的多个 Agent（模型资产 / 测试 / 冒烟）。
+  这些改动尚未提交，接手的人**不要整文件回滚**（会把别人的活一起干掉）。
+- 因此 P0 仍是「可选的美化动作」：要拆提交就按下面的步骤在**新分支**上做，
+  并且**先等并行流程收工、`git status` 稳定**再拆。
+- 实时状态以 `git status --short` 为准；本文不冻结文件数。
 
 - 本轮四个功能涉及的文件（"我的"这一摊）：
   `src/app/llm.js`、`src/app/dom.js`、`src/app/config.js`、`src/app/ui-state.js`、
@@ -241,7 +257,10 @@ npm run test:smoke    → 86 项全过（bundle.js 668 KB / 61 模块）
 - `docs/ARCHITECTURE.md` 的测试覆盖表与实际条数对一下。
 - 重新构建并部署到 GitHub Pages：<https://flying-dragon-ai.github.io/pet-world/>（仓库根的 `index.html` 是入口；
   `dev/build.js` 产出 `dist/`）。
-- `assets/models/` 里 PI 下载的 `cat.glb` 约 9 MB，移动端偏重，评估要不要压缩/降面。
+- ✅ **已完成（并行工作流 D）**：`assets/models/` 的 GLB 已全部压到预算内。
+  2026-11-01 10:11 实跑 `node dev/check-assets.js` → **「模型库体检通过」**
+  （目录 22 个 · 自有 GLB 17 · alias 1 · 程序化 4）；`cat.glb` 从 10.28 MB 降到 2.76 MB / 4 万面。
+  后续新增模型仍要守 `MAX_BYTES = 6MB` 与 `MAX_TRIS = 60k` 两条预算。
 
 ## 6. 雷区（别踩）
 
@@ -264,9 +283,9 @@ npm run test:smoke    → 86 项全过（bundle.js 668 KB / 61 模块）
 
 ```bash
 npm run check:static   # CHECK ALL GREEN
-npm test               # 95 项全过（对方那摊加完单测后条数会变，但必须 0 失败）
-npm run test:smoke     # 通过 86 项，失败 0 项（对方那摊还在加冒烟项，条数会变，但必须 0 失败）
-node dev/balance.mjs   # 三档成长 × 8 对手胜率曲线符合第 3.2 节的设计
+npm test               # 0 失败（条数以输出为准；并行 Agent 一直在加用例）
+npm run test:smoke     # 0 失败（条数以输出为准）
+node dev/balance.mjs   # 三档成长 × 8 对手胜率曲线（设计意图见第 3.2 节；当前实测有偏差）
 ```
 
 另外人工过一遍这 6 条：
@@ -302,6 +321,6 @@ node dev/balance.mjs   # 三档成长 × 8 对手胜率曲线符合第 3.2 节�
 
 ## 附：交接清单速查（给接手的人看，不属于提示词本体）
 
-- 已实现并验证：四个功能全部完成，`npm run check` 全绿（95 单测 + 86 冒烟），已落库为 `50e18d8`。
+- 已实现并验证：四个功能全部完成，`npm run check` 全绿（单测与冒烟均 0 失败，条数见命令输出），已落库为 `50e18d8`。
 - 未完成：另一 Agent 的 3D 改造与 Hyper3D 模型仍在继续；GitHub Pages 未重新部署。
 - 本文件与 `docs/research/` 三份文档一并留在仓库里，随时可查。

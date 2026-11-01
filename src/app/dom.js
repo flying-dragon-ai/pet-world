@@ -15,9 +15,22 @@ export const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
 
 /**
- * 把外部文本安全塞进模板字符串（属性值与文本节点都可用） */
+ * 把外部文本安全塞进模板字符串（属性值与文本节点都可用）。
+ * 只处理 HTML 语境；要放进 onclick 里的 JS 字符串，必须用 jsArg()。 */
 export function esc(value) {
   return String(value ?? '').replace(/[&<>"]/g, (c) => ESCAPES[c]);
+}
+
+/**
+ * 把值放进「双引号属性内的 JS 字符串字面量」—— 模板里的 onclick="app.动作(X)" 就是这种语境。
+ *
+ * 这是最容易被漏掉的一类 XSS 面：esc() 不转义单引号，昵称里塞一个 x')||alert(1)||(' 就能
+ * 跳出字符串、在属性里执行。JSON.stringify 先吃掉引号与反斜杠，esc() 再吃掉双引号，
+ * 于是无论内容是什么，解析器看到的永远只是一段完整的字符串字面量。
+ * 用法：onclick="app.openUserHome(' + jsArg(nick) + ')" —— X 本身就是字面量，外面不要再包引号。
+ */
+export function jsArg(value) {
+  return esc(JSON.stringify(value == null ? '' : String(value)));
 }
 
 /**

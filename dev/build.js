@@ -212,6 +212,19 @@ function copyStatic() {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.copyFileSync(path.join(ROOT, from), target);
   }
+  // 宠物本体 GLB 是一堆文件，按目录整拷（名字与 src/data/w3d-assets.js 的 MODEL() 对应）
+  const modelsFrom = path.join(ROOT, 'assets/models/pets');
+  const modelsTo = path.join(DIST, 'assets/models/pets');
+  if (fs.existsSync(modelsFrom)) {
+    fs.mkdirSync(modelsTo, { recursive: true });
+    let copied = 0;
+    for (const name of fs.readdirSync(modelsFrom)) {
+      if (!name.endsWith('.glb')) continue;
+      fs.copyFileSync(path.join(modelsFrom, name), path.join(modelsTo, name));
+      copied += 1;
+    }
+    console.log('宠物模型：' + copied + ' 个 .glb → dist/assets/models/pets');
+  }
 }
 
 function buildHtml() {

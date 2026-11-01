@@ -46,7 +46,7 @@ export const BATTLE_FOES = [
   },
   {
     id: 'f8', n: '流浪金毛', species: '狗', breed: '金毛寻回犬', ic: '🦮',
-    atk: 68, def: 68, spd: 58, hp: 108, lv: 45,
+    atk: 68, def: 68, spd: 58, hp: 96, lv: 45,
     d: '曾经的宠物明星，如今靠一身腱子肉与不认输的脾气守着街头。',
   },
 ];
@@ -55,13 +55,14 @@ export const BATTLE_FOES = [
 export const FOE_BY_ID = BATTLE_FOES.reduce((m, f) => { m[f.id] = f; return m; }, {});
 
 /**
- * 战斗奖励表：按结果给成长值 / 金币A / 属性。
- * 数值是「战斗任务」的基础产出，属性收益统一走 world-state 的 payAndGain。
+ * 战斗奖励表：按结果给成长值 / 金币A 的**基础产出**。
+ * 属性收益不在这张表里：心情/体力的增减由 domain/battle.js 的 settleOf() 合成，
+ * 最终统一走 views/world-state.js 的 payAndGain() 落盘。
  */
 export const BATTLE_REWARD = {
-  win: { growth: 12, coinA: 8, gain: { mood: 6, stamina: -6, growth: 12 } },
-  draw: { growth: 5, coinA: 3, gain: { mood: -2, stamina: -8, growth: 5 } },
-  lose: { growth: 2, coinA: 0, gain: { mood: -10, stamina: -15, growth: 2 } },
+  win: { growth: 12, coinA: 8 },
+  draw: { growth: 5, coinA: 3 },
+  lose: { growth: 2, coinA: 0 },
 };
 
 /**

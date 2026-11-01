@@ -52,3 +52,12 @@ desktop.ini
 
 # 注意：package-lock.json、assets/js/vendor/、assets/models/、docs/ 都要提交，
 # 它们分别是可复现安装、随包分发的第三方库、模型素材与设计文档。
+assets/models/_raw/
+
+# ── 模型流水线产物（不要提交）─────────────────────
+# *.result.json 是 Hyper3D 生成任务的回执，里面是**带 TOS 临时凭据的预签名 URL**，
+# 既不参与运行、也不该出现在公开仓库；需要复现请重新跑生成任务。
+assets/models/**/*.result.json
+# 下划线开头是流水线的中间产物（例如缩小贴图试跑的 _t512.glb）
+assets/models/**/_*.glb
+dev/tmp-*

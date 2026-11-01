@@ -14,6 +14,11 @@
 <div id="out">loading…</div>
 <script src="../assets/js/vendor/three.min.js"></script>
 <script src="../assets/js/vendor/GLTFLoader.js"></script>
+<!-- 用运行时同一份 pickClips，体检页的 PICK 行才不会和游戏里选的不一致 -->
+<script type="module">
+  import { pickClips } from '../src/data/w3d-assets.js';
+  window.__pickClips = pickClips;
+</script>
 <script>
 /**
  * 单模型体检页（开发用，不进 dist）。
@@ -77,17 +82,22 @@
         scene.add(model);
 
         const clips = (gltf.animations || []).map((c) => c.name);
-        // 与 views/w3d/pet.js 的取用规则保持一致：idle / walk / run
-        const pickOf = (re) => (clips.find((n) => re.test(n)) || null);
+        // 选 clip 的规则直接用运行时的 pickClips（data/w3d-assets.js），不在这里另抄一份
+        const roles = window.__pickClips
+          ? window.__pickClips(gltf.animations || [])
+          : { idle: { name: clips[0] || null }, walk: null, run: null };
         const pick = {
-          idle: pickOf(/survey|idle/i) || clips[0] || null,
-          walk: pickOf(/walk/i) || null,
-          run: pickOf(/run|gallop|fly|swim|dash/i) || null,
+          idle: roles.idle ? roles.idle.name : null,
+          walk: roles.walk ? roles.walk.name : null,
+          run: roles.run ? roles.run.name : null,
         };
 
         if (gltf.animations && gltf.animations.length) {
+          // 播待机那一支，而不是文件里的第一支：鸟的 clip 顺序是 Fly/Idle/Walk，
+          // 播第一支会拍到半空飞行的姿势，看不出模型本身的体态。
+          const idleClip = gltf.animations.find((c) => /idle/i.test(c.name)) || gltf.animations[0];
           mixer = new THREE.AnimationMixer(model);
-          mixer.clipAction(gltf.animations[0]).play();
+          mixer.clipAction(idleClip).play();
           mixer.update(0.6);
         }
 

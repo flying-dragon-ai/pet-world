@@ -442,10 +442,18 @@ function onImpulse(value) {
   }
 }
 
+/** 拉完滑杆立刻判定一次事件（有弹窗开着就先不打扰，等下次进世界再判） */
+function checkEventsAfterSlider() {
+  const wrap = $('modalWrap');
+  if (wrap && wrap.classList.contains('show')) return;
+  checkWorldEvents();
+}
+
 function commitImpulse() {
   worldPet();
   save();
   renderWorld();
+  checkEventsAfterSlider();
 }
 
 /** 攻击值滑杆 */
@@ -465,6 +473,7 @@ function commitAggression() {
   worldPet();
   save();
   renderWorld();
+  checkEventsAfterSlider();
 }
 
 function doCourse(id) {
