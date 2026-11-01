@@ -6,12 +6,14 @@
  * 好处是这些规则可以脱离浏览器直接单测（见 dev/test/world.test.js）。
  */
 import { ATTR_CAP, ATTR_CAP_HIGH, GROWTH_PER_LEVEL, WORLD_MAX_LEVEL } from '../app/config.js';
-import { ATTR_NAMES, WORLD_EVENTS } from '../data/world-tables.js';
+import { ATTR_NAMES, ALL_WORLD_EVENTS } from '../data/world-tables.js';
 
 /** 新宠入世界时的初始六维 */
 export function defaultWorldPet() {
   return {
     courage: 60,
+    impulse: 40,
+    aggression: 30,
     attr: { hunger: 80, clean: 80, mood: 70, stamina: 85, wisdom: 0, growth: 0 },
     courseLv: 0,
     jobLv: 0,
@@ -94,14 +96,22 @@ export function attrDeltaHTML(delta) {
 
 /**
  * 当前满足条件、且还没发放过的事件。
+ *
+ * 事件条件有两种写法：
+ *   - `value(w) > threshold`：单值阈值（勇气值 > 50）；
+ *   - `test(w)`：复合条件（冲动值 > 60 **且** 攻击值 > 60），用于「街头大战」。
  * @returns {Array<object>} 事件配置数组
  */
-export function pendingEvents(world, worldPet, events = WORLD_EVENTS) {
+export function pendingEvents(world, worldPet, events = ALL_WORLD_EVENTS) {
   const earned = world.medals || [];
-  return events.filter((ev) =>
-    (world.loginDays || 0) >= ev.minLoginDay &&
-    ev.value(worldPet) > ev.threshold &&
-    !earned.includes(ev.medal.id));
+  const fired = world.firedEvents || [];
+  return events.filter((ev) => {
+    if (ev.runtime) return false; // 运行时事件由 3D 世界内的引擎触发，不在登录时判定
+    if ((world.loginDays || 0) < ev.minLoginDay) return false;
+    if (fired.includes(ev.id)) return false;
+    const ready = ev.test ? !!ev.test(worldPet) : ev.value(worldPet) > ev.threshold;
+    return ready && !earned.includes(ev.medal.id);
+  });
 }
 
 /**

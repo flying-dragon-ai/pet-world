@@ -1,13 +1,13 @@
 {
   "name": "pet-world",
-  "version": "1.9.1",
+  "version": "1.10.0",
   "private": true,
   "description": "宠物数字管家 · 3D 宠物世界（黑客松 Demo）",
   "type": "commonjs",
   "scripts": {
     "build": "node dev/build.js",
     "serve": "node dev/serve.js 8088",
-    "check:static": "node dev/check.js",
+    "check:static": "node dev/check.js && node dev/check-exports.js",
     "test": "node --test dev/test/*.test.js",
     "test:smoke": "node dev/build.js && node dev/smoke.js",
     "check": "node dev/check.js && node --test dev/test/*.test.js && node dev/build.js && node dev/smoke.js"

@@ -122,11 +122,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const before = world().attr.hunger;
   window.ui.w3dCooldowns = {};
   ok(window.app.w3dAct('feed') === true, '喂食生效');
-  ok(world().attr.hunger === Math.min(100, before + 18), '喂食 → 饥饿值 +18');
+  ok(world().attr.hunger === Math.min(100, before + 15), '喂食 → 饥饿值 +15');
   ok(window.app.w3dAct('feed') === false, '3 秒冷却内第二次喂食被拒绝');
   window.ui.w3dCooldowns = {};
   const stamina0 = world().attr.stamina;
-  world().attr.stamina = 5;
+  world().attr.stamina = 4;
   ok(window.app.w3dAct('play') === false, '体力不足时玩耍被拒绝');
   world().attr.stamina = stamina0;
   window.ui.w3dCooldowns = {};
@@ -140,6 +140,52 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   ok($('modalWrap').classList.contains('show'), '触发事件 → 弹窗出现');
   ok(has('modalBox', '蝶舞之约'), '事件卡内容正确');
   window.app.closeModal();
+
+  group('家园：主题 / 外观 / 家具 / 战功（V1.10 对齐 2D 小游戏）');
+  window.app.go('world');
+  window.app.openWTab('decor');
+  await sleep(30);
+  ok(has('world-body', '家园主题'), '家园 tab 渲染出主题区');
+  ok(has('world-body', '宠物外观'), '家园 tab 渲染出外观区');
+  ok(has('world-body', '院子家具'), '家园 tab 渲染出家具区');
+  ok(has('world-body', '性格画像'), '家园 tab 渲染出派生性格画像');
+  ok(has('world-body', '思念模式'), '家园 tab 渲染出思念模式');
+
+  const coins0 = state().world.coinA;
+  state().world.coinA = 200;
+  ok(window.app.buyHomeTheme('sakura') === true, '买主题成功');
+  ok(state().world.home.themes.includes('sakura'), '主题已入库');
+  ok(state().world.home.theme === 'sakura', '买完自动切到该主题');
+  ok(state().world.coinA === 200 - 30, '主题扣金币A');
+  ok(window.app.useHomeTheme('fresh') === true, '切回默认主题');
+  ok(state().world.home.theme === 'fresh', '主题已切回');
+
+  ok(window.app.buyHomeOutfit('tophat') === true, '买外观成功');
+  ok(state().world.home.outfit.worn.hat === 'tophat', '外观买完直接穿戴');
+  ok(window.app.toggleHomeOutfit('tophat') === true, '脱下外观');
+  ok(state().world.home.outfit.worn.hat === null, '外观已脱下');
+
+  const coins1 = state().world.coinA;
+  ok(window.app.buyHomeFurniture('sofa') === true, '买家具成功');
+  ok(state().world.home.furniture.some((f) => f.id === 'sofa'), '家具已入库');
+  ok(state().world.coinA === coins1 - 20, '家具扣金币A');
+  ok(window.app.placeHomeFurniture('sofa', 1) === true, '家具换机位');
+  ok(state().world.home.furniture.find((f) => f.id === 'sofa').slot === 1, '机位已更新');
+  ok(window.app.removeHomeFurniture('sofa') === true, '家具收回仓库');
+  ok(state().world.coinA === coins1, '收回家具退还金币A');
+
+  state().world.medals = ['butterfly', 'scholar'];
+  ok(window.app.homeMerit() === 6, '战功值 = 勋章数 × 3');
+  const mem0 = !!state().world.home.memorial;
+  window.app.toggleMemorial();
+  ok(state().world.home.memorial !== mem0, '思念模式开关可切换');
+  state().world.home.memorial = false;
+
+  group('社区发帖 → 家园事件');
+  const mood0 = world().attr.mood;
+  const evt = window.app.applyPostEvent('今天带它去打针了');
+  ok(evt && evt.kind === 'alert', '打针类帖子 → 警觉事件');
+  ok(world().attr.mood < mood0, '事件让心情下降');
 
   group('每个页面都能渲染');
   const pages = window.document.querySelectorAll('.page');

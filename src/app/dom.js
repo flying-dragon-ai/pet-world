@@ -14,9 +14,31 @@ export const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel
 
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
 
-/** 把外部文本安全塞进模板字符串（属性值与文本节点都可用） */
+/**
+ * 把外部文本安全塞进模板字符串（属性值与文本节点都可用） */
 export function esc(value) {
   return String(value ?? '').replace(/[&<>"]/g, (c) => ESCAPES[c]);
+}
+
+/**
+ * Markdown → 安全 HTML。
+ *
+ * 用 vendor 的 marked 解析，再用 DOMPurify 消毒。
+ * **消毒这一步不能省**：Markdown 渲染出来的是 HTML，esc() 挡不住，
+ * 一旦漏掉就是 XSS 入口。vendor 缺失时退回纯转义，保证不会渲染出裸标签。
+ */
+export function mdToHtml(text) {
+  const s = String(text ?? '');
+  if (!s) return '';
+  const m = typeof window !== 'undefined' ? window.marked : null;
+  const p = typeof window !== 'undefined' ? window.DOMPurify : null;
+  if (!m || !p) return esc(s);
+  try {
+    const html = m.parse(s, { breaks: true, gfm: true });
+    return p.sanitize(html, { USE_PROFILES: { html: true } });
+  } catch {
+    return esc(s);
+  }
 }
 
 /** 抖动一下，用于表单校验失败的即时反馈 */

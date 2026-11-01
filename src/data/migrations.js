@@ -9,6 +9,7 @@
 import { seed, seedNotifs, dogP3, v17extra, ACTS, NEWPRODS } from './seed.js';
 import { now } from '../app/clock.js';
 import { SCHEMA_VERSION } from '../app/config.js';
+import { breedRefOf } from './pet-sizes.js';
 
 export function migrateV3(S){
   const zmap={'猫猫':'猫区','狗狗':'狗区','异宠':'异宠区'};
@@ -81,7 +82,64 @@ function ensureWorld(S) {
   if (S.world.lastLeave === undefined) S.world.lastLeave = now();
   if (!S.world.pets) S.world.pets = {};
   if (!Array.isArray(S.world.medals)) S.world.medals = [];
+  if (!Array.isArray(S.world.firedEvents)) S.world.firedEvents = [];
+  // V1.10：家园装饰状态（主题 / 外观 / 家具 / 思念模式 / 事件日志）
+  if (!S.world.home || typeof S.world.home !== 'object') {
+    S.world.home = {
+      theme: 'fresh',
+      themes: ['fresh'],
+      outfit: { owned: [], worn: { hat: null, glasses: null, neck: null } },
+      furniture: [
+        { id: 'bed', slot: 0 },
+        { id: 'bowlf', slot: 0 },
+        { id: 'plant', slot: 0 },
+      ],
+      memorial: false,
+      logs: [],
+    };
+  } else {
+    const home = S.world.home;
+    if (!Array.isArray(home.themes) || !home.themes.length) home.themes = ['fresh'];
+    if (!home.outfit) home.outfit = { owned: [], worn: { hat: null, glasses: null, neck: null } };
+    if (!home.outfit.worn) home.outfit.worn = { hat: null, glasses: null, neck: null };
+    if (!Array.isArray(home.outfit.owned)) home.outfit.owned = [];
+    if (!Array.isArray(home.furniture)) home.furniture = [];
+    if (!Array.isArray(home.logs)) home.logs = [];
+  }
+  // V1.10：二元属性补齐（冲动/攻击）+ 打架战绩
+  Object.keys(S.world.pets).forEach((id) => {
+    const w = S.world.pets[id];
+    if (!w) return;
+    if (w.impulse === undefined || w.impulse === null) w.impulse = 40;
+    if (w.aggression === undefined || w.aggression === null) w.aggression = 30;
+    if (!w.battle) w.battle = { win: 0, draw: 0, lose: 0, last: null };
+  });
   return S;
+}
+
+/**
+ * V1.10 新增：宠物体型字段（身高 / 体格 / 花纹眼型拆分）。
+ *
+ * 老存档的 `pat` 是「花纹·眼型·体型」拼在一起的一个字符串，
+ * 这里拆成 pattern / eye / build 三个独立字段，体型才能单独参与计算。
+ * height 缺失时按品种成年身高下限补（取下限而非中点，避免把幼犬标成成年体型）。
+ */
+function fillPetSizes(S) {
+  (S.pets || []).forEach((p) => {
+    if (typeof p.pat === 'string' && p.pat.indexOf('·') > 0) {
+      const parts = p.pat.split('·').map((s) => s.trim());
+      if (!p.pattern) p.pattern = parts[0] || '';
+      if (!p.eye) p.eye = parts[1] || '';
+      if (!p.build) p.build = parts[2] || '标准';
+    }
+    if (p.height === undefined || p.height === null || p.height === '') {
+      const ref = breedRefOf(p.breed, p.species);
+      p.height = ref ? Math.round(ref.height[0]) : '';
+    }
+    if (!p.build) p.build = '标准';
+    if (!p.pattern) p.pattern = '';
+    if (!p.eye) p.eye = '';
+  });
 }
 
 /**
@@ -106,5 +164,6 @@ export function migrate(saved) {
   renamePets(S);
   if (S.user && S.user.nick === '铲屎官Leo') S.user.nick = '奎因';
   fillV17Extras(S);
+  fillPetSizes(S);
   return ensureWorld(S);
 }

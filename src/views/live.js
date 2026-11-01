@@ -8,7 +8,7 @@ import { save } from './../app/store.js';
 import { LVCMTS, LVROOMS } from './../data/live-rooms.js';
 export const live={open:false,playing:false,mini:false,x:null,y:null,room:0,viewers:0,likes:0,cIdx:0,tm:null};
 /* V1.7.1：Live 已嵌入首页 hero 卡片（heroLive），原横滑列表移除 */
-function liveOpen(auto){
+export function liveOpen(auto){
   live.open=true;
   renderLiveFab();
   if($('pg-home').classList.contains('on'))refreshCurrentPage();

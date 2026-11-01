@@ -14,24 +14,31 @@ src/
 ├── package.json        # { "type": "module" }：让 src/ 下的 .js 按 ES Module 解析
 ├── main.js             # 启动：装桥 → 读存档 → 外壳 → 落地页 → 离线结算
 ├── app/                # 应用层（与具体业务无关的基础设施）
-│   ├── config.js       # 常量（键名、版本、等级曲线、冷却时长…）
+│   ├── config.js       # 常量（键名、版本、等级曲线、冷却时长、打架回合数…）
 │   ├── clock.js        # 时间端口：now() / today()，测试可注入固定时钟
 │   ├── persistence.js  # 存储端口：localStorage ⇄ 内存自动降级
 │   ├── store.js        # 状态仓库 S（稳定引用 + save() 落盘）
-│   ├── dom.js          # $ / $$ / esc / imgErr …
+│   ├── dom.js          # $ / $$ / esc / mdToHtml / imgErr …
 │   ├── format.js       # 时间等人话格式化（纯函数）
 │   ├── ui.js           # toast / sheet / modal / 二次确认
 │   ├── ui-state.js     # 瞬时 UI 状态（tab、筛选、草稿…），唯一额外的全局出口
 │   ├── actions.js      # 动作注册表 + window.app 桥
+│   ├── llm.js          # AI 出口（端口）：默认本地语料，将来换真模型只改这里
 │   ├── pages.js→router.js  # 页面登记与切页
 │   └── shell.js        # 状态栏、手机框缩放、未读红点、离线横幅
 ├── domain/             # 领域层（纯函数，不依赖 DOM / 存储）
-│   ├── pet.js          # 家园四维、等级、年龄
+│   ├── pet.js          # 家园四维、等级、年龄 + 体型/体况/生长阶段
 │   ├── world.js        # 六维、等级、事件、离线衰减、消耗/收益
-│   └── w3d.js          # 横屏判定、手动互动数值表、冷却
+│   ├── w3d.js          # 横屏判定、互动数值表、心情表情、挂机衰减、季节、派生性格、行为决策、对话
+│   ├── battle.js       # 打架面板、回合结算、负伤、奖励（随机数可注入）
+│   ├── ai-prompt.js    # 九大场景、安全词表、System Prompt 拼装
+│   ├── ai-local.js     # 本地演示语料（纯文本答复生成）
+│   └── post.js         # 发帖校验、帖子对象生成、分页
 ├── data/               # 数据层（纯内容）
 │   ├── seed.js         # 出厂存档与示例数据
 │   ├── migrations.js   # 存档迁移（任意历史版本 → 当前结构）
+│   ├── pet-sizes.js    # 品种体型参考表（276 犬种自动生成 + 猫表 + 中文别名）
+│   ├── battle-tables.js # 对手 NPC 库、奖励表、负伤表
 │   ├── world-tables.js # 课程/打工/商品/场馆/事件/属性表
 │   ├── w3d-assets.js   # 3D 模型地址、建筑坐标
 │   ├── live-rooms.js   # 直播间与弹幕示例数据
@@ -41,19 +48,22 @@ src/
     ├── home.js  ai.js  community.js  profile.js  grow.js
     ├── monitor.js  mall.js  misc.js  service.js  act.js
     ├── petwizard.js  live.js  points.js  pets.js  records.js
+    ├── battle.js       # 出门打架：选对手 → 回合结算 → 战报卡
     ├── world-state.js  # 世界状态网关（domain 规则 ⇄ store ⇄ 刷新）
     ├── world-panel.js  # 竖屏世界面板
     └── w3d/            # 3D 舞台（横屏）
         ├── ctx.js      # 舞台句柄（three.js 单例）
         ├── stage.js    # 进入/挂起/恢复/退出/横屏布局/降级
-        ├── scene.js    # 庭院：地面/篱笆/树/小屋/建筑/粒子
-        ├── weather.js  # 晴阴雨 + 天空渐变 + 光照
+        ├── scene.js    # 庭院：地面/篱笆/树/小屋/建筑/躺垫/家具 + 主题配色
+        ├── weather.js  # 晴阴雨雪 + 四季 + 天空渐变 + 光照
         ├── pet.js      # GLTF 加载 + 兜底模型 + 动画状态机
-        ├── ai.js       # 自主行为状态机 + 手写动画
+        ├── ai.js       # 自主行为状态机（23 态：摇尾/嗅闻/躺垫/拆家/进屋…）+ 手写动画
         ├── input.js    # 拖动环绕 / 双指缩放 / 点按拾取
-        ├── hud.js      # 顶部六维微条 + 聊天气泡定位
+        ├── hud.js      # 顶部六维微条 + 宠物信息行（名字/品种/天数/天气季节/战功）+ 气泡定位
         ├── tick.js     # 帧循环
         ├── interactions.js  # 手动互动（值表在 domain/w3d.js）
+        ├── chat.js     # 3D 内宠物聊天面板（台词规则在 domain/w3d.js）
+        ├── events.js   # 运行时战功事件 + 生活小事件 + 社区帖事件落地
         └── index.js    # 门面：对外只暴露这里有导出
 ```
 
@@ -102,16 +112,49 @@ registerActions('mall-extra', { clearRecentViews, selectAllCart, toggleCartItem 
 - 世界数值：`views/world-state.js` 的 `payAndGain / addWorldGrowth / canPay`
 - 3D 互动：`views/w3d/interactions.js` 的 `applyManualAction`
 - 健康打卡：`views/grow.js` 的 `commitDailyRecord`
+- 战斗事件：`views/world-state.js` 的 `checkWorldEvents` → 通过 `registerWorldHooks` 回调到
+  `views/battle.js`，避免两个视图互相 import 形成环
 
 视图只负责「读状态 → 拼模板 → 调用一次动作」。
+
+### 4. AI 是端口，不是实现
+
+`src/app/llm.js` 是**唯一的 AI 出口**：
+
+```js
+llm.chat({ pet, question, scene, prompt, messages, onDelta, signal })
+  → Promise<{ text, stopped, reason }>
+```
+
+- 现在 `llm.js` 内部默认走 `domain/ai-local.js` 的本地演示语料（离线可用、结果可复现）；
+- 将来接真模型，只要 `setLlmBackend(你的函数)`，**`views/ai.js` 一行都不用改**；
+- 视图只负责把 `onDelta` 收到的增量显示出来，不关心内容从哪来；
+- ⚠️ 真接 API 时 **Key 不能进前端**，必须走自己的服务端代理转发。
+
+### 5. 第三方库怎么进项目
+
+| 库 | 许可 | 体积 | 用途 |
+|---|---|---|---|
+| `three.min.js` / `GLTFLoader.js` | MIT | 603KB / 96KB | 3D 舞台（既有） |
+| `marked.min.js` | MIT | 39,903 字节 | Markdown 渲染（AI 回复 / 社区正文） |
+| `purify.min.js` | Apache-2.0 / MPL-2.0 | 29,828 字节 | XSS 消毒（**Markdown 渲染的硬前提**） |
+
+三条规矩：
+
+1. vendor 文件放 `assets/js/vendor/`，**同时**在 `index.html` 加 `<script src>`、
+   在 `dev/build.js` 的 `copyStatic()` 的 `pairs` 数组加一行 —— 漏一处 `npm run build` 就会缺文件；
+2. 渲染用户内容的顺序永远是 `marked.parse()` → `DOMPurify.sanitize()`，
+   统一收口在 `app/dom.js` 的 `mdToHtml()`；
+3. 运行时**不经任何 CDN**，产物一次性 vendor 进仓库。
 
 ## 可测试性设计
 
 | 关卡 | 命令 | 覆盖 |
 |---|---|---|
 | 静态体检 | `npm run check:static` | import 路径、循环依赖、动作契约 |
-| 领域单测 | `npm test` | 等级曲线、消耗收益、事件触发、离线衰减、迁移、冷却…（36 项） |
-| 浏览器冒烟 | `npm run test:smoke` | jsdom 真跑 bundle：登录→首页→世界→3D 降级→面板七个 tab→互动→事件卡→逐页渲染→存档（54 项） |
+| 领域单测 | `npm test` | 等级曲线、消耗收益、事件触发、离线衰减、迁移、冷却、体型分级、战斗结算、AI 词表与 prompt、发帖校验与分页…（85 项） |
+| 浏览器冒烟 | `npm run test:smoke` | jsdom 真跑 bundle：登录→首页→世界→3D 降级→面板七个 tab→互动→事件卡→逐页渲染→存档（60 项） |
+| 数值平衡 | `node dev/balance.mjs` | 打架胜率曲线（三档成长 vs 八个对手），改数值后跑一次看曲线是否合理 |
 
 为了让领域可测，`clock.now()` 与 `persistence.storage` 都是可替换的端口：
 测试里可以冻结时间、换掉存储后端。

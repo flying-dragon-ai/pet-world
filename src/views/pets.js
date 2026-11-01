@@ -50,6 +50,11 @@ export function petSVG(pet, size, mood) {
   const furDark = pet.fur ? shade(pet.fur, 0.85) : (cat ? '#E89B3C' : '#D0925B');
   const inner = cat ? '#FBE3C4' : '#F6E3CC';
 
+  // 体格影响身体轮廓：偏瘦收窄、圆润加宽（与档案里的 build 字段联动）
+  const build = pet.build || '标准';
+  const bodyRx = build === '偏瘦' ? 41 : build === '圆润' ? 50 : 46;
+  const bodyRy = build === '偏瘦' ? 29 : build === '圆润' ? 38 : 34;
+
   const nose = cat
     ? '<path d="M94 110q6 6 12 0" stroke="#E07B54" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M100 112l0 5M100 117l-5 4M100 117l5 4" stroke="#C9A98C" stroke-width="2.4" fill="none" stroke-linecap="round"/>'
     : '<ellipse cx="100" cy="112" rx="7" ry="5" fill="#4A3B2A"/>';
@@ -66,7 +71,7 @@ export function petSVG(pet, size, mood) {
     : '<path d="M76 160q-24 4-20 22" stroke="' + fur + '" stroke-width="10" fill="none" stroke-linecap="round"/>';
 
   return '<svg viewBox="0 0 200 200" width="' + size + '" height="' + size + '">' + ears +
-    '<g class="gp-bob"><ellipse cx="100" cy="152" rx="46" ry="34" fill="' + fur + '"/>' +
+    '<g class="gp-bob"><ellipse cx="100" cy="152" rx="' + bodyRx + '" ry="' + bodyRy + '" fill="' + fur + '"/>' +
     '<g><ellipse cx="100" cy="98" rx="52" ry="46" fill="' + fur + '"/>' +
     '<ellipse cx="100" cy="108" rx="40" ry="30" fill="' + inner + '"/>' +
     eyesSVG(mood) + nose + mouth +

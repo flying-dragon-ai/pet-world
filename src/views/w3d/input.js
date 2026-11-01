@@ -6,7 +6,8 @@
  */
 import { $ } from '../../app/dom.js';
 import { getStage } from './ctx.js';
-import { touchPet, openSpotTab } from './interactions.js';
+import { touchPet, openSpotTab, applyManualAction, toggleHouse } from './interactions.js';
+import { sendStageToast } from './fx.js';
 
 const MIN_DISTANCE = 8;
 const MAX_DISTANCE = 26;
@@ -98,6 +99,33 @@ function handleTap(e) {
     if (petHits.length) {
       touchPet();
       return;
+    }
+  }
+
+  // 躺垫 / 家具 / 小屋（HTML 小游戏里院子里的可点物）
+  const props = [];
+  if (s.cushion) props.push(s.cushion);
+  if (s.house) props.push(s.house);
+  (s.props || []).forEach((p) => props.push(p));
+  if (props.length) {
+    const propHits = s.ray.intersectObjects(props, true);
+    if (propHits.length) {
+      let node = propHits[0].object;
+      while (node && !node.userData.cushion && !node.userData.furniture && !node.userData.house) {
+        node = node.parent;
+      }
+      if (node && node.userData.cushion) {
+        applyManualAction('lie');
+        return;
+      }
+      if (node && node.userData.furniture) {
+        sendStageToast('「' + (node.userData.furnitureLabel || '家具') + '」· 点底部「躺躺」可以过去躺着');
+        return;
+      }
+      if (node && node.userData.house) {
+        toggleHouse();
+        return;
+      }
     }
   }
 

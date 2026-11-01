@@ -1,6 +1,6 @@
 import { registerActions } from './../app/actions.js';
 import { today } from './../app/clock.js';
-import { $, esc, uid } from './../app/dom.js';
+import { $, esc, mdToHtml, uid } from './../app/dom.js';
 import { go } from './../app/router.js';
 import { S, save } from './../app/store.js';
 import { openSheet, toast } from './../app/ui.js';
@@ -10,18 +10,12 @@ import { shopPicks } from './mall.js';
 import { needNet } from './../app/shell.js';
 import { registerPage } from './../app/router.js';
 import { closeSheet } from './../app/ui.js';
-const SCENES=[
-  {id:'ask',n:'健康问诊',i:'i-med',c:'#F05B5B',d:'症状分析·就医建议'},
-  {id:'care',n:'日常养护',i:'i-leaf',c:'#4CA876',d:'喂养洗护·行为习惯'},
-  {id:'feed',n:'喂养计算器',i:'i-bowl',c:'#E8945A',d:'按档案算喂食量'},
-  {id:'watch',n:'看护解读',i:'i-video',c:'#8B7DE8',d:'监控画面AI解读'},
-  {id:'attr',n:'异常归因',i:'i-zap',c:'#E8A23A',d:'健康数据异常分析'},
-  {id:'shop',n:'商品导购',i:'i-cart',c:'#3AB5C0',d:'结合档案推荐'},
-  {id:'write',n:'发帖帮写',i:'i-edit',c:'#E8709A',d:'标题文案一键生成'},
-  {id:'trip',n:'旅行规划',i:'i-pin',c:'#5B8DEF',d:'携宠行程·清单'},
-  {id:'doll',n:'定制顾问',i:'i-gift',c:'#D9A03C',d:'玩偶尺寸·配饰'}
-];
-const scn=id=>SCENES.find(s=>s.id===id)||SCENES[0];
+import * as llm from './../app/llm.js';
+import { AI_SCENES, isRiskQuestion, isEmergency, buildSystemPrompt, composeMessages, sceneOf } from './../domain/ai-prompt.js';
+import { localGreeting, localRefusal } from './../domain/ai-local.js';
+/* 九大场景定义在 domain/ai-prompt.js（接真模型时也只有这一份） */
+const SCENES = AI_SCENES;
+const scn = sceneOf;
 function ctxPet(){return S.set.context?curPet():null}
 function ctxTag(){const p=ctxPet();if(!p)return '<span class="chip" style="background:rgba(0,0,0,.06);color:#8A99AB;cursor:pointer" onclick="app.toggleCtx()"><svg class="icon icon-s"><use href="#i-x"/></svg>通用模式（未注入档案）</span>';return '<span class="chip" style="cursor:pointer" onclick="app.toggleCtx()" title="点击切换上下文开关"><svg class="icon icon-s"><use href="#i-paw"/></svg>已注入档案：'+p.name+' · '+p.breed+' · '+petAge(p)+' · '+p.weight+'kg</span>'}
 function toggleCtx(){S.set.context=!S.set.context;save();if($('ctxChip'))$('ctxChip').innerHTML=ctxTag();if($('pg-ai').classList.contains('on'))renderAI();toast(S.set.context?'已开启档案上下文注入':'已切换通用模式')}
@@ -88,7 +82,7 @@ function switchScene(id){
   save();renderAI();toast('已切换至「'+scn(id).n+'」');
 }
 function aiNewChat(){CH.sess=newChat(CH.scene);CH.msgs=CH.sess.msgs;CH.active=false;CH.emgShown=false;save();renderAI();toast('已开启新对话')}
-function aiGreet(scene){return '你好！我是宠物数字管家AI助手，已进入「'+scn(scene).n+'」场景。'+(ctxPet()?'我已读取「'+curPet().name+'」的档案，会结合它的实际情况回答。':'当前为通用模式，可在设置中开启档案上下文。')+'有什么可以帮你？'}
+function aiGreet(scene){return localGreeting(scene,ctxPet())}
 function symTap(s){
   const i=$('chatIn');if(!i)return;
   const p=ctxPet();
@@ -117,7 +111,7 @@ function openSessions(){
 }
 
 /* ---- 对话状态（V1.5：AI主Tab即聊天页） ---- */
-let CH={sess:null,scene:'ask',msgs:[],stream:null,emgShown:false,active:false};
+let CH={sess:null,scene:'ask',msgs:[],stream:null,emgShown:false,active:false,abort:null};
 function newChat(scene,pre){const s={id:uid(),scene,title:'',last:'',msgs:[],ts:Date.now()};S.aiSess.unshift(s);if(S.aiSess.length>50)S.aiSess.pop();return s}
 function openChat(scene,pre){
   CH.scene=scene;
@@ -141,56 +135,20 @@ function renderMsgs(){
     if(m.emg)return '<div class="emg" style="margin-bottom:12px"><div style="display:flex;align-items:center;gap:7px;color:#D94343;font-weight:900;font-size:14px"><svg class="icon"><use href="#i-alert"/></svg>急诊提示</div><div style="font-size:12.5px;line-height:1.7;margin-top:6px">'+m.t+'</div></div>';
     const fb=m.fb!==undefined?'<div style="display:flex;gap:14px;margin-top:8px;align-items:center"><span style="font-size:10.5px;color:var(--sub)">'+(m.stop?'已停止生成':'这条回答有帮助吗')+'</span><span style="cursor:pointer" onclick="app.fbMsg(\''+m.id+'\',1)"><svg class="icon icon-s" style="color:'+(m.fb===1?'#4CA876':'#B9C4D2')+'"><use href="#i-heart"/></svg></span><span style="cursor:pointer" onclick="app.fbMsg(\''+m.id+'\',0)"><svg class="icon icon-s" style="color:'+(m.fb===0?'#F05B5B':'#B9C4D2')+'"><use href="#i-x"/></svg></span>'+(m.fb===0?'<span class="chip" style="font-size:9px">已归档badcase，可继续追问</span>':'')+'</div>':'';
     const sceneTag='<span style="font-size:9px;padding:1px 7px;border-radius:6px;background:'+scn(CH.scene).c+'1a;color:'+scn(CH.scene).c+';margin-left:6px">'+scn(CH.scene).n+'</span>';
-    return '<div class="msg-ai" style="display:flex;gap:8px;margin-bottom:12px"><div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#8FB6EE,#3A7BD5);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:#fff"><use href="#i-spark"/></svg></div><div style="max-width:82%"><div style="background:rgba(255,255,255,.75);padding:10px 13px;border-radius:4px 16px 16px 16px;font-size:13px;line-height:1.65" class="qTxt">'+m.t+(m.stop?'<span style="color:#A8B2BE;font-size:11px">（回答已停止）</span>':'')+'</div>'+fb+'</div></div>';
+    return '<div class="msg-ai" style="display:flex;gap:8px;margin-bottom:12px"><div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#8FB6EE,#3A7BD5);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:#fff"><use href="#i-spark"/></svg></div><div style="max-width:82%"><div style="background:rgba(255,255,255,.75);padding:10px 13px;border-radius:4px 16px 16px 16px;font-size:13px;line-height:1.65" class="qTxt">'+mdToHtml(m.t)+(m.stop?'<span style="color:#A8B2BE;font-size:11px">（回答已停止）</span>':'')+'</div>'+fb+'</div></div>';
   }).join('');
   box.scrollTop=box.scrollHeight;
 }
 function fbMsg(id,v){const m=CH.msgs.find(x=>x.id===id);if(!m)return;m.fb=v;CH.sess.msgs=CH.msgs;save();renderMsgs();if(v===0)toast('已记录反馈，将用于优化');if(v===1)toast('感谢反馈！')}
-const EMG_KW=['呕吐','抽搐','误食','中毒','呼吸困难','出血','昏迷','不省'];
-const RISK_KW=['剂量','毫克','用量','药量','吃多少药'];
-function aiReply(q){
-  const p=ctxPet(),pn=p?p.name:'宠物',br=p?p.breed:'',age=p?petAge(p):'',w=p?p.weight:'';
-  const gen=[
-    '根据您提供的描述，初步判断属于常见情况，不用过度紧张。结合'+pn+'的档案（'+br+'，'+age+'，'+w+'kg），建议先居家观察24小时：保持环境安静、提供充足饮水、记录症状变化。如48小时内未缓解或出现精神萎靡、拒食拒水，请及时携带最近的健康记录就医。可以在「档案-健康记录」导出PDF供医生参考。',
-    '结合'+pn+'的当前档案数据（体重'+w+'kg，处于标准区间），这个情况通常与日常习惯有关。建议：1）保持规律作息，减少环境应激；2）饮食维持七日不变，观察食欲与排便；3）每日在健康页打卡记录。若出现连续异常，我会自动生成归因分析报告，首页健康概览也会标红提醒。'
-  ];
-  const R={
-    ask:'【可能原因】结合'+pn+'的情况（'+br+'，'+age+'），常见原因包括：进食过快、环境应激、轻微肠胃不适。\n【居家观察】1.禁食4-6小时观察精神状态；2.少量多次提供温水；3.记录发生频率与伴随表现。\n【就医信号】出现持续症状、精神萎靡、拒食超过24小时，请尽快就医。\n【提醒】以上为科普级参考，不能替代兽医面诊。',
-    care:gen[Math.floor(Math.random()*gen.length)],
-    feed:p?('根据档案计算：\n【基础热量】'+pn+'体重 '+w+'kg × '+('猫'===p.species?'60 kcal/kg（成猫系数）':'系数按体型 45-55 kcal/kg')+' ≈ '+Math.round(w*('猫'===p.species?60:50))+' kcal/天\n【换算克数】以主粮约3.5kcal/g计算 ≈ '+Math.round(w*('猫'===p.species?60:50)/3.5)+'g/天，分 2-3 餐\n【个性化调整】已考虑绝育状态：'+p.neuter+'，若活动量小可下调10%\n【过敏提示】档案标注：'+(p.note||'无已知过敏')+'，选粮请避开相关成分。'):'请先在档案中完善宠物体重信息，可获得精准计算。',
-    watch:'【行为】画面中'+pn+'刚从猫爬架跳下，正在窗台附近缓慢踱步巡逻。\n【情绪】尾巴自然下垂摆动，耳朵朝前，整体情绪平稳偏好奇。\n【异常】未发现踱步异常或应激表现。当前时段活动量与近7日均值接近。建议保持监控，我会在异动时推送提醒。',
-    attr:'【异常项】近7日体重曲线整体上行，'+pn+'从 5.10kg → '+w+'kg（+4.9%）。\n【可能归因】1.近期换粮热量偏高（档案显示10-10新增冻干零食）；2.绝育后代谢下降（档案：已绝育）；3.运动量偏少（活力值58）。\n【建议】将零食控制在15g/日以内，恢复每日15分钟逗猫互动；若4周内继续上升超过10%，建议体检排查。\n【联动】家园虚拟形象已同步「微胖」状态提示。',
-    shop:('结合'+pn+'档案的推荐：\n1.【主粮】室内成猫粮 K36 —— 适合室内活动量，含膳食纤维排毛球，适配当前体重 '+w+'kg 的每日热量\n2.【饮水】智能饮水机 —— 档案显示饮水打卡正常，升级循环过滤可继续巩固\n3.【互动】逗猫棒套装 —— 档案活力值58偏低，建议每日互动15分钟提升活力\n【安全提示】已自动排除含牛肉成分商品（档案过敏史：'+(p&&p.note||'无')+'）。\n以上为AI推荐，仅供参考。点商品详情页可直接加购。'),
-    write:'已为您生成草稿：\n【标题备选】\n1.《'+pn+'的一百种撒娇方式》\n2.《谁家的猫这么黏人？哦，是我的》\n3.《凌晨五点，我被'+pn+'踩醒的第N天》\n【正文草稿】\n养'+br+'的日常就是：下班进门一秒被扑倒，写稿时键盘上长猫，睡觉时胸口压着一只'+w+'kg的「暖宝宝」。它不会说话，但我知道，它把我当成了全世界。\n（生成内容需编辑确认后发布）',
-    trip:'【行程规划】周末两日携宠 '+pn+' 大理行：\nD1 上午：驱车/高铁抵达，入住「宠物友好民宿」（档案提示：需提前报备体重'+w+'kg）\nD1 下午：洱海生态廊道慢行（牵绳），傍晚草地撒欢\nD2 上午：宠物友好咖啡店打卡，返程\n【携宠清单】便携水碗、常用药（续档案过敏提示）、疫苗本（档案显示猫三联在有效期内）、应急联系卡\n【提示】大理紫外线强，注意毛发防晒与补水。需要我导出清单到收藏吗？',
-    doll:'【定制建议】为'+pn+'定制3D玩偶：\n【尺寸】档案体重'+w+'kg，建议 15cm 等比缩小款，还原度最佳\n【材质】短毛水晶绒（还原'+br+'毛色纹理）\n【配饰】推荐搭配迷你项圈+同款橘色围兜，与档案照片一致度更高\n【定稿提示】定稿后模型与配饰不可修改，请仔细确认360°预览效果。\n可在「定制专区」直接下单，订单将标记「定制」徽标。'
-  };
-  /* 症状标签命中：区分「居家可护理 / 必须就医」（PRD 模块二 5.3） */
-  if(CH.scene==='ask'){
-    const SYM_R=[
-      ['呕吐','【可能原因】进食过快、换粮应激、毛球刺激（'+pn+'为'+br+'，'+age+'）。\n【居家可护理】✅ 禁食4-6小时（保留饮水）\n✅ 少量多次喂温水，观察是否再吐\n✅ 换粮遵循七日过渡法\n【禁忌事项】❌ 不要自行喂人用止吐药\n❌ 24小时内停喂零食与油腻食物\n【必须就医信号】⚠ 一日内呕吐≥3次、呕吐物带血/异物、伴随精神萎靡或腹痛，请立即就医。'],
-      ['拉稀','【可能原因】饮食不当、受凉或轻度肠胃炎（'+br+'，'+age+'）。\n【居家可护理】✅ 保证饮水，可喂宠物益生菌\n✅ 换易消化食物观察24-48小时\n✅ 注意腹部保暖\n【禁忌事项】❌ 禁喂牛奶与高油食物\n❌ 不要盲目使用止泻药\n【必须就医信号】⚠ 便中带血、腹泻超过24小时、明显脱水（皮肤回弹差），请立即就医。'],
-      ['皮肤病','【可能原因】过敏性皮炎、真菌/螨虫感染（'+br+'常见）。\n【居家可护理】✅ 佩戴伊丽莎白圈防止舔咬\n✅ 保持患处干燥，环境定期消毒\n【禁忌事项】❌ 不要使用人用皮肤药膏\n❌ 未确诊前不要频繁洗浴\n【必须就医信号】⚠ 大面积脱毛、皮肤破溃渗液、快速扩散，需皮肤镜检后对症用药。'],
-      ['泪痕','【可能原因】鼻泪管偏短、饮食偏咸或轻度结膜炎（档案：曾有结膜炎史）。\n【居家可护理】✅ 每日用宠物湿巾轻柔清洁\n✅ 降低主粮盐分，修剪眼周毛发\n【禁忌事项】❌ 不要使用人用眼药水\n【必须就医信号】⚠ 分泌物变黄绿、眼睑红肿、频繁抓眼，请排查结膜/角膜问题。'],
-      ['关节','【可能原因】运动损伤或体重偏大加重关节负担（当前'+w+'kg）。\n【居家可护理】✅ 控制体重，减少高处跳跃\n✅ 补充软骨素类保健品，铺设防滑垫\n【禁忌事项】❌ 急性肿痛期不要热敷按摩\n【必须就医信号】⚠ 持续跛行、拒碰患肢、关节肿胀，请拍片排查。'],
-      ['食欲不振','【可能原因】天气变化、食物单一或轻微口腔不适。\n【居家可护理】✅ 观察24小时精神与饮水\n✅ 温粮加热提高气味诱食\n【禁忌事项】❌ 不要强行灌食\n【必须就医信号】⚠ 完全拒食超过24小时或伴黄疸/呕吐，立即就医。'],
-      ['打喷嚏','【可能原因】粉尘刺激、温差着凉或上呼吸道早期感染（'+age+'）。\n【居家可护理】✅ 保暖、保持空气流通\n✅ 观察是否伴随眼部分泌物\n【禁忌事项】❌ 不要使用人用感冒药\n【必须就医信号】⚠ 脓性鼻涕、咳嗽或发烧，请尽快检测猫鼻支/杯状病毒。']
-    ];
-    const hit=SYM_R.find(s=>q.includes(s[0]));
-    if(hit)return hit[1];
-    return R.ask;
-  }
-  return R[CH.scene]||gen[0];
-}
 function sendMsg(){
   const inp=$('chatIn');const q=(inp&&inp.value||'').trim();
   if(!q){toast('请输入问题');return}
   if(!needNet())return;
   const ensureActive=()=>{if(!CH.active||!CH.sess){CH.sess=newChat(CH.scene);CH.msgs=CH.sess.msgs;CH.active=true}};
-  if(RISK_KW.some(k=>q.includes(k))){
+  if(isRiskQuestion(q)){
     ensureActive();
     CH.msgs.push({r:'me',t:q,ts:Date.now()});
-    CH.msgs.push({r:'ai',id:uid(),t:'抱歉，涉及药品剂量的问题无法直接回答。药物使用剂量必须遵兽医处方，'+(ctxPet()?'请携带'+curPet().name+'的档案记录线下就医。':'请线下就医。'),ts:Date.now()});
+    CH.msgs.push({r:'ai',id:uid(),t:localRefusal(ctxPet()),ts:Date.now()});
     if(!CH.sess.title)CH.sess.title=q.slice(0,15);
     saveSess();renderAI();const ni=$('chatIn');if(ni)ni.value='';return;
   }
@@ -200,38 +158,52 @@ function sendMsg(){
   CH.emgShown=false;
   renderAI();
   const ni=$('chatIn');if(ni)ni.value='';
-  const isEmg=EMG_KW.some(k=>q.includes(k));
-  streamReply(q,isEmg);
+  streamReply(q);
 }
-function streamReply(q,isEmg){
+/**
+ * 流式回复：数据来源是 app/llm.js 这个端口（现在是本地语料，将来换真模型只改端口）。
+ * 视图只负责「把增量显示出来」，不关心内容从哪来。
+ */
+function streamReply(q){
   const m={r:'ai',id:uid(),t:'',ts:Date.now()};
   CH.msgs.push(m);
   const box=$('chatMsgs');
   box.insertAdjacentHTML('beforeend','<div id="streaming" style="display:flex;gap:8px;margin-bottom:12px"><div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,#8FB6EE,#3A7BD5);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:#fff"><use href="#i-spark"/></svg></div><div style="max-width:82%"><div id="stTxt" style="background:rgba(255,255,255,.75);padding:10px 13px;border-radius:4px 16px 16px 16px;font-size:13px;line-height:1.65" class="qTxt"></div><div style="display:flex;justify-content:center;margin-top:6px"><button class="btn btn-sm btn-ghost" id="stopBtn" onclick="app.stopGen()"><svg class="icon icon-s"><use href="#i-stop"/></svg> 停止生成</button></div></div></div>');
   box.scrollTop=box.scrollHeight;
   $('sendBtn').disabled=true;
-  const full=aiReply(q);
-  let i=0;
-  const abortAt=isEmg?Math.floor(full.length*0.18):-1;
-  CH.stream=setInterval(()=>{
-    i+=1+Math.floor(Math.random()*2);
-    const st=$('stTxt');if(!st){clearInterval(CH.stream);return}
-    if(abortAt>0&&i>=abortAt){
-      clearInterval(CH.stream);CH.stream=null;
-      m.t='（内容已中止）';m.stop=false;
-      showEmg();
-      finishStream();
-      return;
+
+  const pet=ctxPet();
+  const prompt=buildSystemPrompt(pet,CH.scene);
+  const messages=composeMessages(CH.msgs.slice(0,-1),prompt);
+  const ac=new AbortController();
+  CH.abort=ac;
+
+  llm.chat({
+    pet,
+    question:q,
+    scene:CH.scene,
+    prompt,
+    messages,
+    signal:ac.signal,
+    onDelta:(delta)=>{
+      m.t=delta;
+      const st=$('stTxt');
+      if(st){st.innerHTML=mdToHtml(delta)+'<span style="opacity:.4">▍</span>';box.scrollTop=box.scrollHeight;}
+    },
+  }).then((res)=>{
+    CH.abort=null;
+    m.t=res.text||m.t;
+    if(res.reason==='emergency'){m.t='（内容已中止）';m.stop=false;showEmg();}
+    else if(res.stopped){m.stop=true;}
+    finishStream();
+    if(CH.scene==='shop'&&!isEmergency(q)&&!res.stopped&&res.text){
+      const picks=shopPicks();if(picks.length){CH.msgs.push({r:'cards',items:picks});saveSess();renderMsgs();}
     }
-    if(i>=full.length){
-      clearInterval(CH.stream);CH.stream=null;
-      m.t=full;finishStream();
-      if(CH.scene==='shop'&&!isEmg){const picks=shopPicks();if(picks.length){CH.msgs.push({r:'cards',items:picks});saveSess();renderMsgs()}}
-      return;
-    }
-    st.innerHTML=esc(full.slice(0,i))+'<span style="opacity:.4">▍</span>';
-    box.scrollTop=box.scrollHeight;
-  },26);
+  }).catch(()=>{
+    CH.abort=null;
+    finishStream();
+    toast('生成失败，请重试');
+  });
 }
 function finishStream(){
   const el=$('streaming');if(el)el.remove();
@@ -239,17 +211,12 @@ function finishStream(){
   saveSess();renderMsgs();
 }
 function stopGen(){
-  if(!CH.stream)return;
-  clearInterval(CH.stream);CH.stream=null;
+  if(CH.abort){CH.abort.abort();CH.abort=null;}
   const m=CH.msgs[CH.msgs.length-1];
-  const st=$('stTxt');
-  if(st&&st.textContent){m.t=esc2keep(st.textContent.replace('▍',''));}
-  else m.t='（已停止）';
-  m.stop=true;
+  if(m&&m.r==='ai'&&m.t)m.stop=true;
   finishStream();
   toast('已停止生成：已输出内容保留，不扣减重新生成次数');
 }
-function esc2keep(s){return s}
 function showEmg(){
   const p=ctxPet();
   CH.msgs.push({r:'ai',emg:true,t:'检测到「'+(p?p.name:'您的宠物')+'」可能存在急症风险（如持续呕吐/抽搐/误食），请立即联系宠物医院！<br>· 24h急诊：安安宠物医院 010-6400-8888<br>· 距离您 2.3km · 中山路42号<br>点击「我知道了」收起急诊引导。',ts:Date.now()});

@@ -19,13 +19,16 @@ import {
   pendingEvents, negate, attrDeltaText, attrDeltaHTML, settleOffline, WELCOME_BACK_HOURS,
 } from '../domain/world.js';
 import { ATTR_NAMES } from '../data/world-tables.js';
+import { themeById, outfitById, furnitureById } from '../domain/w3d.js';
 import { curPet } from './pets.js';
 
 /** 世界面板刷新 / 3D 挂起恢复：由视图在启动时注册，避免双向依赖 */
 const hooks = {
   refreshPanel: () => {},
+  refreshStage: () => {},
   suspendStage: () => {},
   resumeStage: () => {},
+  battlePrompt: () => {},
 };
 
 export function registerWorldHooks(next) {
@@ -113,13 +116,24 @@ export function earnCoins(n) {
 export function checkWorldEvents() {
   const w = worldPet();
   const ready = pendingEvents(S.world, w);
+  let count = 0;
   ready.forEach((ev) => {
+    if (ev.battle) {
+      // 战斗类事件交给战斗视图（先应战/回避，再结算），这里只发一张提示卡
+      hooks.battlePrompt(ev);
+      count++;
+      return;
+    }
     S.world.medals.push(ev.medal.id);
-    applyGain(w, ev.gain || {});
+    // 金币走钱包，六维走属性：混在一起会把 coinA 写进 attr
+    const { coinA, ...attrGain } = ev.gain || {};
+    applyGain(w, attrGain);
+    if (coinA) earnCoins(coinA);
     save();
     setTimeout(() => showEventCard(ev), 450);
+    count++;
   });
-  return ready.length;
+  return count;
 }
 
 function showEventCard(ev) {
@@ -174,6 +188,171 @@ export function attrKeyName(key) {
 
 export { negate, attrDeltaText, attrDeltaHTML };
 
+/* ---------------- 家园（主题 / 外观 / 家具 / 思念模式） ---------------- */
+
+/**
+ * 家园装饰状态：主题、宠物外观、院子家具、思念模式。
+ * 首次访问自动补齐成出厂样子（默认主题 + 三件基础家具）。
+ */
+export function homeState() {
+  if (!S.world.home) {
+    S.world.home = {
+      theme: 'fresh',
+      themes: ['fresh'],
+      outfit: { owned: [], worn: { hat: null, glasses: null, neck: null } },
+      furniture: [
+        { id: 'bed', slot: 0 },
+        { id: 'bowlf', slot: 0 },
+        { id: 'plant', slot: 0 },
+      ],
+      memorial: false,
+    };
+  }
+  const h = S.world.home;
+  if (!Array.isArray(h.themes) || !h.themes.length) h.themes = ['fresh'];
+  if (!h.outfit) h.outfit = { owned: [], worn: { hat: null, glasses: null, neck: null } };
+  if (!Array.isArray(h.outfit.owned)) h.outfit.owned = [];
+  if (!h.outfit.worn) h.outfit.worn = { hat: null, glasses: null, neck: null };
+  if (!Array.isArray(h.furniture)) h.furniture = [];
+  if (!Array.isArray(h.logs)) h.logs = [];
+  return h;
+}
+
+/** 战功值：每枚勋章记 3 点（对齐 HTML 小游戏的 merit 口径） */
+export function homeMerit() {
+  return (S.world.medals || []).length * 3;
+}
+
+/** 买主题（已拥有则直接切换） */
+export function buyHomeTheme(id) {
+  const t = themeById(id);
+  const h = homeState();
+  if (h.themes.includes(id)) return useHomeTheme(id);
+  if (S.world.coinA < t.price) {
+    toast('金币A不足，去打工小镇赚金币吧');
+    return false;
+  }
+  S.world.coinA -= t.price;
+  h.themes.push(id);
+  useHomeTheme(id);
+  save();
+  hooks.refreshPanel();
+  hooks.refreshStage();
+  return true;
+}
+
+/** 切换主题（3D 场景配色立刻跟着变） */
+export function useHomeTheme(id) {
+  const h = homeState();
+  if (!h.themes.includes(id)) return false;
+  h.theme = id;
+  save();
+  hooks.refreshPanel();
+  hooks.refreshStage();
+  return true;
+}
+
+/** 买外观（买完直接穿上） */
+export function buyHomeOutfit(id) {
+  const o = outfitById(id);
+  const h = homeState();
+  if (h.outfit.owned.includes(id)) return toggleHomeOutfit(id);
+  if (S.world.coinA < o.price) {
+    toast('金币A不足，去打工小镇赚金币吧');
+    return false;
+  }
+  S.world.coinA -= o.price;
+  h.outfit.owned.push(id);
+  h.outfit.worn[o.slot] = id;
+  save();
+  hooks.refreshPanel();
+  hooks.refreshStage();
+  return true;
+}
+
+/** 脱下 / 戴上 */
+export function toggleHomeOutfit(id) {
+  const o = outfitById(id);
+  const h = homeState();
+  h.outfit.worn[o.slot] = h.outfit.worn[o.slot] === id ? null : id;
+  save();
+  hooks.refreshPanel();
+  hooks.refreshStage();
+  return true;
+}
+
+/** 买家具（买回院子） */
+export function buyHomeFurniture(id) {
+  const f = furnitureById(id);
+  const h = homeState();
+  if (h.furniture.some((x) => x.id === id)) return true;
+  if (S.world.coinA < f.price) {
+    toast('金币A不足，去打工小镇赚金币吧');
+    return false;
+  }
+  S.world.coinA -= f.price;
+  h.furniture.push({ id, slot: 0 });
+  save();
+  hooks.refreshPanel();
+  hooks.refreshStage();
+  return true;
+}
+
+/** 换摆放机位 */
+export function placeHomeFurniture(id, slot) {
+  const h = homeState();
+  const item = h.furniture.find((x) => x.id === id);
+  if (!item) return false;
+  item.slot = slot;
+  save();
+  hooks.refreshPanel();
+  hooks.refreshStage();
+  return true;
+}
+
+/** 收回仓库（付费家具退还金币） */
+export function removeHomeFurniture(id) {
+  const h = homeState();
+  const f = furnitureById(id);
+  h.furniture = h.furniture.filter((x) => x.id !== id);
+  if (f && f.price > 0) S.world.coinA += f.price;
+  save();
+  hooks.refreshPanel();
+  hooks.refreshStage();
+  return true;
+}
+
+/** 思念模式开关 */
+export function toggleHomeMemorial() {
+  const h = homeState();
+  h.memorial = !h.memorial;
+  save();
+  hooks.refreshPanel();
+  return h.memorial;
+}
+
+/** 颁发战功勋章（3D 运行时事件用；重复颁发返回 false） */
+export function awardHomeMedal(id) {
+  const list = S.world.medals || (S.world.medals = []);
+  if (list.includes(id)) return false;
+  list.push(id);
+  const fired = S.world.firedEvents || (S.world.firedEvents = []);
+  if (!fired.includes(id)) fired.push(id);
+  save();
+  hooks.refreshPanel();
+  return true;
+}
+
+/** 写一条家园事件日志（3D 世界内的事件 / 社区同步都会记） */
+export function pushHomeLog(text) {
+  const h = homeState();
+  h.logs.unshift({ t: Date.now(), text: String(text || '') });
+  if (h.logs.length > 60) h.logs.pop();
+  return h.logs;
+}
+
 registerActions('world-state', {
   worldPet, worldLevel, canPay, payAndGain, addWorldGrowth, settleWorld, checkWorldEvents,
+  homeState, homeMerit, buyHomeTheme, useHomeTheme, buyHomeOutfit, toggleHomeOutfit,
+  buyHomeFurniture, placeHomeFurniture, removeHomeFurniture, toggleHomeMemorial, awardHomeMedal,
 });

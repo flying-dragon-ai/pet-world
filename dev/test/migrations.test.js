@@ -78,3 +78,25 @@ test('迁移：宠物改名兜底与昵称迁移', () => {
   assert.equal(s.pets[0].name, '小可爱');
   assert.equal(s.user.nick, '奎因');
 });
+
+test('迁移：宠物体型字段补齐（身高缺失按品种下限补，pat 拆成花纹/眼型/体格）', () => {
+  const base = seed();
+  const p = base.pets[0];
+  delete p.height;
+  delete p.build;
+  p.pat = '斑点·杏眼·偏瘦';
+
+  const s = migrate(base);
+  const out = s.pets[0];
+  assert.equal(out.height, 23, '中华田园猫成年身高下限 23cm');
+  assert.equal(out.build, '偏瘦', '体格从老 pat 串里拆出来');
+  assert.equal(out.pattern, '斑点');
+  assert.equal(out.eye, '杏眼');
+});
+
+test('迁移：已有身高的宠物不被覆盖', () => {
+  const base = seed();
+  base.pets.find((p) => p.id === 'p3').height = 50;
+  const s = migrate(base);
+  assert.equal(s.pets.find((p) => p.id === 'p3').height, 50);
+});

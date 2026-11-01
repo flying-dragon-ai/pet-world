@@ -5,7 +5,7 @@
  * 事件表的 `story` 是纯函数：(petWorld, ctx) → HTML 文案，ctx 提供宠物名与登录天数，
  * 保持数据层不反向依赖视图层。
  */
-import { VENUE_UNLOCK_LEVEL } from '../app/config.js';
+import { VENUE_UNLOCK_LEVEL, STREET_FIGHT_IMPULSE, STREET_FIGHT_AGGRESSION } from '../app/config.js';
 
 /** 学费：上课消耗 / 收益 */
 export const COURSES = [
@@ -80,6 +80,10 @@ export const ATTR_ROWS = [
 /**
  * 战功事件表：属性条件 + 登录天数达标 → 自动触发一次，发勋章与属性奖励。
  * 新增事件只需往这里追加一条。
+ *
+ * 条件两种写法：
+ *   - `value(w) > threshold`：单值阈值；
+ *   - `test(w)`：复合条件（多个二元属性同时满足），例如「街头大战」。
  */
 export const WORLD_EVENTS = [
   {
@@ -94,9 +98,88 @@ export const WORLD_EVENTS = [
       `第 ${ctx.loginDays} 天的午后，阳光正好。<br>「${ctx.petName}」鼓起勇气独自跑出院子，<br>追着一只蝴蝶在草丛里玩了整整一个下午～<br><b style="color:#D9A03C">勇气值 ${w.courage}%（>50%）</b>，符合触发条件`,
     medal: { id: 'butterfly', n: '蝶舞之约', ic: '🦋', d: '勇气值>50%时，登录家园系统第5天触发「独自外出追蝴蝶」事件获得' },
   },
+  {
+    id: 'streetfight',
+    icon: '🥊',
+    title: '街头大战',
+    test: (w) => w.impulse > STREET_FIGHT_IMPULSE && w.aggression > STREET_FIGHT_AGGRESSION,
+    minLoginDay: 3,
+    battle: true,
+    gain: { growth: 2 },
+    story: (w, ctx) =>
+      `第 ${ctx.loginDays} 天，「${ctx.petName}」叼着球出门散步，<br>在街角撞上了另一只不讲理的家伙——<br><b style="color:#F05B5B">冲动值 ${w.impulse}% · 攻击值 ${w.aggression}%</b>（均 >60%），<br>谁也没打算先让一步。`,
+    medal: { id: 'streetfight', n: '街头硬汉', ic: '🥊', d: '冲动值与攻击值同时>60%时触发「街头大战」事件获得' },
+  },
+];
+
+/**
+ * V1.10：新增 6 枚战功 —— 两枚登录时按状态判定（scholar / worker），
+ * 四枚由 3D 世界内的运行时引擎触发（runtime: true，登录时不再自动判定）。
+ * 勋章目录由事件表派生，所以面板与 3D HUD 看到的永远是同一份。
+ */
+export const EXTRA_WORLD_EVENTS = [
+  {
+    id: 'scholar',
+    icon: '🎓',
+    title: '三课结业',
+    test: (w) => (w.courseLv || 0) >= 3,
+    minLoginDay: 1,
+    gain: { wisdom: 5, growth: 10 },
+    story: () => '三阶课程全部修完，<br>它在院子里把学到的本事演示了一遍，<br>聪明得让人心虚。',
+    medal: { id: 'scholar', n: '三课结业', ic: '🎓', d: '修完全部三阶课程后获得' },
+  },
+  {
+    id: 'worker',
+    icon: '💰',
+    title: '打工皇帝',
+    test: (w) => (w.jobLv || 0) >= 5,
+    minLoginDay: 1,
+    gain: { growth: 10, coinA: 20 },
+    story: () => '打工累计满 5 次，<br>它已经是小镇上小有名气的「打工皇帝」，<br>赚回来的金币够买一整排罐头。',
+    medal: { id: 'worker', n: '打工皇帝', ic: '💰', d: '累计打工 5 次后获得' },
+  },
+  {
+    id: 'demolish',
+    icon: '🔨',
+    title: '拆家现场',
+    runtime: true,
+    gain: {},
+    story: () => '捣蛋值爆表，<br>趁主人不注意啃了沙发角、抓了抓墙皮！',
+    medal: { id: 'demolish', n: '拆家小能手', ic: '🔨', d: '捣蛋值≥60% 且清洁值偏低时，在院子里触发拆家事件' },
+  },
+  {
+    id: 'explorer',
+    icon: '🧭',
+    title: '探险时间',
+    runtime: true,
+    gain: {},
+    story: () => '探索欲爆棚，<br>在院子里嗅啊嗅，挖出了一个小宝藏！',
+    medal: { id: 'explorer', n: '小小探险家', ic: '🧭', d: '智慧值≥30 且成长值≥100 时触发探险事件' },
+  },
+  {
+    id: 'lazy',
+    icon: '😴',
+    title: '躺平一整天',
+    runtime: true,
+    gain: {},
+    story: () => '体力见底，<br>它在院子里躺了一整天，尾巴一抖一抖的。',
+    medal: { id: 'lazy', n: '躺平大师', ic: '😴', d: '体力值≤20 且心情值≤40 时，触发躺平事件' },
+  },
+  {
+    id: 'rainday',
+    icon: '☔',
+    title: '雨中等待',
+    runtime: true,
+    gain: {},
+    story: () => '外面下起了小雨，<br>它安静地待在屋檐下，陪着你一起看雨滴落在院子里。',
+    medal: { id: 'rainday', n: '雨中等待', ic: '☔', d: '雨天在院子里陪主人看雨时触发' },
+  },
 ];
 
 /** 战功目录由事件表派生 */
-export const MEDALS = WORLD_EVENTS.map((e) => e.medal);
+export const MEDALS = WORLD_EVENTS.concat(EXTRA_WORLD_EVENTS).map((e) => e.medal);
+
+/** 全部可判定事件（登录时判定 + 运行时判定） */
+export const ALL_WORLD_EVENTS = WORLD_EVENTS.concat(EXTRA_WORLD_EVENTS);
 
 export const VENUE_UNLOCK = VENUE_UNLOCK_LEVEL;

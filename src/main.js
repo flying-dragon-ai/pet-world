@@ -33,6 +33,7 @@ import './views/act.js';
 import './views/petwizard.js';
 import './views/live.js';
 import './views/world-panel.js';
+import './views/battle.js';
 
 import { resumeOnboardingIfNeeded } from './views/auth.js';
 import { settleWorld } from './views/world-state.js';
@@ -78,7 +79,7 @@ if (document.readyState === 'loading') {
 
 /** 供调试/演示脚本使用：暴露少量只读入口（不参与业务） */
 window.__petWorld = {
-  version: 'V1.9.1',
+  version: 'V1.10.0',
   state: () => S,
   goto: go,
   root: () => $('phone'),

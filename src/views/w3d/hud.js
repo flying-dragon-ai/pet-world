@@ -1,20 +1,28 @@
 /**
- * 舞台 HUD：顶部六维微条 + 金币/等级；底部聊天气泡定位。
+ * 舞台 HUD：顶部六维微条 + 金币/等级/战功 + 宠物信息行（名字/品种/天数/天气季节）；
+ * 底部聊天气泡定位。
  */
-import { $ } from '../../app/dom.js';
+import { $, esc } from '../../app/dom.js';
+import { S } from '../../app/store.js';
 import { ATTR_NAMES, ATTR_ROWS } from '../../data/world-tables.js';
+import { WEATHER_LABELS } from '../../data/w3d-assets.js';
 import { GROWTH_PER_LEVEL } from '../../app/config.js';
-import { worldPet, worldLevel } from '../world-state.js';
+import { moodEmoji } from '../../domain/w3d.js';
+import { worldPet, worldLevel, homeMerit } from '../world-state.js';
+import { curPet } from '../pets.js';
 import { currentCoins } from './interactions.js';
 import { getStage } from './ctx.js';
 import { refreshSigns } from './scene.js';
 import { autoBubble } from './ai.js';
+import { currentSeason } from './weather.js';
 
 /** 顶部数值区 */
 export function refreshHud() {
   const s = getStage();
   if (!s) return;
-  const attr = worldPet().attr;
+  const w = worldPet();
+  const attr = w.attr;
+  const pet = curPet();
 
   const stats = $('w3dStats');
   if (stats) {
@@ -32,6 +40,20 @@ export function refreshHud() {
   const coin = $('w3dCoin');
   if (coin) coin.textContent = '🪙 ' + currentCoins() + ' · Lv.' + worldLevel();
 
+  // 第二行：宠物信息（对齐 HTML 小游戏的 HUD）
+  const info = $('w3dInfo');
+  if (info) {
+    const season = currentSeason();
+    const weatherText = WEATHER_LABELS[s.weather] || '晴 ☀️';
+    info.innerHTML =
+      '<span class="w3d-name">' + moodEmoji(attr) + ' ' + esc(pet.name) + '</span>' +
+      '<span>' + esc(pet.breed) + '</span>' +
+      '<span>世界 Lv.' + worldLevel() + '</span>' +
+      '<span>第 ' + (S.world.loginDays || 1) + ' 天</span>' +
+      '<span>' + weatherText + ' · ' + season.n + '季</span>' +
+      '<span class="w3d-merit">🏅 战功 ' + homeMerit() + '</span>';
+  }
+
   s.hudDirty = false;
   refreshSigns();
 }
@@ -41,7 +63,10 @@ export function refreshBubble() {
   const s = getStage();
   const bubble = $('w3dBubble');
   if (!s || !s.pet || !bubble) return;
-
+  if (s.pet.visible === false) {
+    bubble.style.display = 'none';
+    return;
+  }
   const text = s.say || autoBubble();
   if (!text) {
     bubble.style.display = 'none';

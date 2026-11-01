@@ -1,4 +1,4 @@
-# 宠物数字管家 · 3D 宠物世界（V1.9.1）
+# 宠物数字管家 · 3D 宠物世界（V1.10.0）
 
 黑客松 Demo：虚拟人宠世界 Web App。竖屏 App 内嵌横屏 three.js 3D 宠物世界（庭院 / 天气 / 自主 AI / 手动互动），
 配套学院、打工、商城、战功事件、运动娱乐馆（Lv.30 解锁）、社区、电商、活动组局等完整模块。
@@ -7,6 +7,10 @@
 
 V1.9 是一次完整 rebuild：把原来 19 个按序加载的全局脚本，重构成**分层 ES Module + 动作注册表 + 纯函数领域层**，
 并补齐单测与浏览器级冒烟。设计说明见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
+
+V1.10 在 V1.9 的骨架上补了四块业务功能：**宠物身高/体重/体型类型**、**AI Chat（端口化）**、
+**社区发帖增强（Markdown 预览 + 图片上传 + 分页）**、**宠物出门打架**。
+选型与适配依据见 [`docs/research/`](docs/research/)（三份：轮子调研 ×2 + 适配方案 ×1）。
 
 ## 快速开始
 
@@ -28,24 +32,31 @@ npm run build        # 产出 dist/（合并成普通 script），再打开 dist
 | `npm run serve` | 本地静态服务器（含局域网 IP 提示） |
 | `npm run build` | 打包到 `dist/`（`bundle.js` + 复制 vendor/css） |
 | `npm run check:static` | 静态体检：import 路径 / 循环依赖 / 动作契约 |
-| `npm test` | 领域单测（node --test，36 项） |
-| `npm run test:smoke` | 构建 + jsdom 冒烟（54 项：登录→首页→世界→3D 降级→面板→逐页渲染→存档） |
+| `npm test` | 领域单测（node --test，95 项） |
+| `npm run test:smoke` | 构建 + jsdom 冒烟（86 项：登录→首页→世界→3D 降级→面板→逐页渲染→存档） |
 | `npm run check` | 上面三项全跑 |
+| `node dev/balance.mjs` | 打架胜率平衡模拟（三档成长 × 8 个对手） |
+| `node dev/gen-pet-sizes.js` | 从 AKC 公开数据集重新生成犬种体型表（`src/data/pet-sizes.js`） |
 
 ## 目录
 
 ```
 index.html                入口（静态骨架 + <script type="module" src="src/main.js">）
 src/app/                  基础设施：config / clock / persistence / store / dom / ui / ui-state / actions / router / shell
-src/domain/               纯函数规则：pet（家园四维）/ world（六维·事件·离线衰减）/ w3d（互动数值·横屏判定）
+                          llm（AI 出口端口，唯一一处调模型的地方）
+src/domain/               纯函数规则：pet（家园四维·体型换算）/ world（六维·事件·离线衰减）/ w3d（互动数值·横屏判定）
+                          battle（战斗结算）/ ai-prompt（提示词与场景）/ ai-local（本地语料兜底）/ post（发帖校验）
 src/data/                 纯数据：seed / migrations / world-tables / w3d-assets / live-rooms
+                          pet-sizes（276 犬种 + 29 猫体型表）/ battle-tables（8 个原创对手）
 src/views/                视图：auth home ai community profile grow monitor mall misc service act petwizard live
-                          pets records points / world-state（世界网关） / world-panel（竖屏世界面板）
+                          pets records points / world-state（世界网关） / world-panel（竖屏世界面板）/ battle（打架）
 src/views/w3d/            3D 舞台：ctx stage scene weather pet ai input hud tick interactions
+                          chat（3D 内聊天面板）/ events（运行时战功 · 生活事件 · 社区帖事件）
 assets/css/app.css        全部样式
-assets/js/vendor/         three.min.js + GLTFLoader.js（r128 本地备料）
+assets/js/vendor/         three.min.js + GLTFLoader.js（r128）+ marked.min.js（MIT）+ purify.min.js（Apache-2.0）
 dev/                      build.js（零依赖打包器）/ check.js（静态体检）/ smoke.js（jsdom 冒烟）/ serve.js / test/
-docs/                     PRD、3D 世界施工计划、ARCHITECTURE.md、MERGE-V1.7.5.md
+                          gen-pet-sizes.js（体型表生成）/ balance.mjs（战斗平衡模拟）
+docs/                     PRD、3D 世界施工计划、ARCHITECTURE.md、MERGE-V1.7.5.md、research/（轮子调研 + 适配方案）
 archive/                  拆分前的完整单文件备份（回滚保险）
 ```
 
@@ -57,15 +68,61 @@ archive/                  拆分前的完整单文件备份（回滚保险）
    除了 `app` 与 `ui` 两个显式出口，没有别的全局变量。
 3. **规则写进 `src/domain/`，并且必须配单测**。视图只做「读状态 → 拼模板 → 调一次动作」。
 
+补充两条 V1.10 引入的硬约束：
+
+4. **依赖方向单向**：`data ← domain ← views ← main`。`domain/` 不碰 DOM、不碰存储；`data/` 不许 import `domain/`。
+   需要跨层复用的纯函数下沉到 `data/`（例：`breedKeyOf` 放在 `src/data/pet-sizes.js`）。
+5. **第三方库只走 vendor 白名单**：`assets/js/vendor/` + `index.html` 的 `<script src>` + `dev/build.js` 的
+   `copyStatic()` `pairs` 数组，**三处必须同步**，漏一处线上就 404。运行时不经 CDN。
+
+## V1.10 新增功能速览
+
+| 功能 | 入口 | 主要文件 |
+|---|---|---|
+| 身高 / 体重 / 体型类型 | 建档表单 + 宠物档案 | `src/data/pet-sizes.js`、`src/domain/pet.js`、`src/views/profile.js` |
+| 宠物出门打架 | 家园面板「出门打架」磁贴 | `src/domain/battle.js`、`src/data/battle-tables.js`、`src/views/battle.js` |
+| AI Chat | 首页 AI 入口 | `src/app/llm.js`、`src/domain/ai-prompt.js`、`src/domain/ai-local.js` |
+| 社区发帖增强 | 社区发帖 | `src/domain/post.js`、`src/views/community.js` |
+
+几点实现口径：
+
+- **体型类型不落盘**：按「体重 ÷ 品种标准体重」自动判定迷你/小型/中型/大型/巨型，用户手选的只有「体格 build」。
+- **BCS 体况评分是近似估算**，按体重与品种标准中点的比值线性映射，UI 上已标明不替代兽医触诊。
+- **战斗结算是纯函数 + 可注入 rng**（`makeRng` 自写 LCG），同 seed 必同结果，因此可单测、可复现。
+- **AI 是端口不是实现**：`src/app/llm.js` 是唯一出口，`setLlmBackend(fn)` 可换成真模型；
+  纯静态托管撑不住服务端代理，所以默认后端是本地语料（离线可演示），API Key 绝不能进前端。
+- **Markdown 渲染统一收口**在 `src/app/dom.js` 的 `mdToHtml()`：`marked` 解析 → `DOMPurify` 消毒，vendor 缺失时退回转义。
+
+## 3D 游戏玩法对齐《虚拟宠物家园》
+
+3D 世界的玩法按仓库根目录的参考实现 `虚拟宠物家园小游戏(1).html`（2D 治愈风单文件小游戏）重做了一遍：
+互动数值、自主行为、台词、HUD、四季、挂机衰减、家园主题 / 宠物外观 / 院子家具、8 枚战功、3D 内聊天、社区帖联动，
+全部按 2D 版的口径落地；**六维与二元属性的存档口径不动**，2D 版的六性格由现有数据派生（不落盘）。
+完整映射表见 [`docs/PLAY-3D-V1.10.md`](docs/PLAY-3D-V1.10.md)。
+
+| 2D 小游戏 | 3D 世界 |
+|---|---|
+| 喂食 / 洗澡 / 抚摸 / 陪玩 / 躺躺 / 进屋 / 聊天 | 底部七个按钮 + 院子躺垫 + 小屋门 + 聊天面板 |
+| idleBehavior 自主行为 | 23 态 AI 状态机，台词与阈值逐条镜像 |
+| 四维挂机流逝 | 每 5 秒结算的在线衰减（速率一致） |
+| 春夏秋冬 | 季节索引（7 天一季）→ 春花 / 秋叶 / 冬雪 |
+| 主题 / 家具 / 外观 | 家园页三个分区，改完立刻体现在 3D 院子里 |
+| 8 枚战功 | 4 枚登录判定 + 4 枚运行时触发 |
+| 帖子 → 家园事件 | 社区发帖后宠物会有反应 |
+
 ## 3 分钟 Demo 动线
 
-首页磁贴「人宠世界」→ 加载屏 → 横屏 3D 庭院（拖转视角 / 点宠物抚摸 / 四按钮互动 / 点建筑进面板）
+首页磁贴「人宠世界」→ 加载屏 → 横屏 3D 庭院（拖转视角 / 点宠物抚摸 / 七个按钮互动 / 点躺垫让它躺下 / 点小屋进屋 / 点建筑进面板）
 → 学院上课 → 打工赚金币A → 商城购物 → 战功墙（第 5 天勇气>50% 触发「蝶舞之约」）
-→ 社区发帖 +10 成长值 → Lv.30 解锁运动 / 娱乐馆。
+→ 社区发帖 +10 成长值 → Lv.30 解锁运动 / 娱乐馆 → 家园面板「出门打架」打一场街头遭遇战。
 
 ## 文档
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — 分层、依赖方向、扩展指南、与旧版对照
 - [`docs/MERGE-V1.7.5.md`](docs/MERGE-V1.7.5.md) — 外部 V1.7.5 合并记录（首页磁贴口径：健康管理 / 成长记录）
+- [`docs/research/ADAPTATION-PLAN.md`](docs/research/ADAPTATION-PLAN.md) — 四个新功能的选型与落地适配方案
+- [`docs/research/wheels-pet-body-and-battle.md`](docs/research/wheels-pet-body-and-battle.md) — 体型数据 / 战斗公式的 GitHub 轮子调研
+- [`docs/research/wheels-ai-chat-and-community.md`](docs/research/wheels-ai-chat-and-community.md) — AI Chat / 社区发帖的 GitHub 轮子调研
+- [`docs/PLAY-3D-V1.10.md`](docs/PLAY-3D-V1.10.md) — 3D 游戏玩法对齐《虚拟宠物家园》的映射表与数值对照
 - `docs/虚拟人宠世界模块PRD(1).md` — 模块需求
 - `docs/PLAN-3D宠物世界V1.8.md` — 3D 世界施工计划（含模型清单与假设）

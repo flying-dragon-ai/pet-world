@@ -16,23 +16,28 @@ import { VENUE_UNLOCK_LEVEL, GROWTH_PER_LEVEL } from '../app/config.js';
 import {
   COURSES, JOBS, GOODS, VENUES, ATTR_NAMES, ATTR_ROWS, MEDALS,
 } from '../data/world-tables.js';
+import { THEMES, OUTFITS, FURNITURE } from '../data/w3d-assets.js';
+import { derivedTraits, themeById } from '../domain/w3d.js';
 import { curPet, petSVG } from './pets.js';
 import {
   worldPet, worldLevel, canPay, payAndGain, lackNames, addWorldGrowth,
   checkWorldEvents, registerWorldHooks, spendCoins, earnCoins,
   negate, attrDeltaHTML, attrDeltaText,
+  homeState, homeMerit, buyHomeTheme, useHomeTheme, buyHomeOutfit, toggleHomeOutfit,
+  buyHomeFurniture, placeHomeFurniture, removeHomeFurniture, toggleHomeMemorial,
 } from './world-state.js';
 import { enterStage, suspendStage, resumeStage, isStageSuspended, stageWeather, sendStageToast, registerStageHooks } from './w3d/index.js';
 
 const WORLD_TABS = [
   ['home', '总览'], ['school', '学院'], ['jobs', '打工'], ['shop', '商城'],
-  ['sport', '运动'], ['fun', '娱乐'], ['medal', '战功'],
+  ['sport', '运动'], ['fun', '娱乐'], ['medal', '战功'], ['decor', '家园'],
 ];
 
 const ENTRIES = [
   { tab: 'school', n: '学院', ic: '🎓', d: '上学提属性' },
   { tab: 'jobs', n: '打工', ic: '💼', d: '赚金币A' },
   { tab: 'shop', n: '商城', ic: '🛒', d: '食物清洁品' },
+  { tab: 'battle', act: 'openBattlePicker', n: '出门打架', ic: '🥊', d: '遭遇街头对手' },
   { tab: 'sport', n: '运动', ic: '🏟️', d: '强体魄提勇气', locked: true },
   { tab: 'fun', n: '娱乐', ic: '🎡', d: '放松心情', locked: true },
   { tab: 'medal', n: '战功', ic: '🎖️', d: '勋章收藏' },
@@ -106,7 +111,8 @@ function statBar(row, value) {
 
 function entryTile(entry, level) {
   const locked = entry.locked && level < VENUE_UNLOCK_LEVEL;
-  return '<div class="card chov" style="padding:12px 4px;text-align:center;cursor:pointer;position:relative;' + (locked ? 'opacity:.55' : '') + '" onclick="app.openWTab(\'' + entry.tab + '\')">' +
+  const click = entry.act ? 'app.' + entry.act + '()' : 'app.openWTab(\'' + entry.tab + '\')';
+  return '<div class="card chov" style="padding:12px 4px;text-align:center;cursor:pointer;position:relative;' + (locked ? 'opacity:.55' : '') + '" onclick="' + click + '">' +
     (locked ? '<span style="position:absolute;top:5px;right:7px;font-size:11px">🔒</span>' : '') +
     '<div style="font-size:22px">' + entry.ic + '</div>' +
     '<div style="font-size:11.5px;font-weight:800;margin-top:4px">' + entry.n + '</div>' +
@@ -140,7 +146,11 @@ export function renderWorld() {
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><b style="font-size:13px">性格二元属性</b><span style="font-size:10px;color:var(--sub)">按百分比拖动调整</span></div>' +
     '<div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:800;margin:6px 0 10px"><span style="color:#F5A623">勇气值 ' + w.courage + '%</span><span style="color:#8B5CF6">胆小值 ' + (100 - w.courage) + '%</span></div>' +
     '<input type="range" min="0" max="100" step="1" value="' + w.courage + '" class="crg" id="crgRange" oninput="app.onCourage(this.value)" onchange="app.commitCourage()">' +
-    '<div style="font-size:10px;color:var(--sub);margin-top:8px;line-height:1.6">勇气值>50%：第5天登录可触发「独自外出追蝴蝶」战功事件；胆小值高：陌生人来访会躲起来</div></div>';
+    '<div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:800;margin:14px 0 10px"><span style="color:#F05B5B">冲动值 ' + w.impulse + '%</span><span style="color:#4CA876">稳重值 ' + (100 - w.impulse) + '%</span></div>' +
+    '<input type="range" min="0" max="100" step="1" value="' + w.impulse + '" class="crg" id="impRange" oninput="app.onImpulse(this.value)" onchange="app.commitImpulse()">' +
+    '<div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:800;margin:14px 0 10px"><span style="color:#E8709A">攻击值 ' + w.aggression + '%</span><span style="color:#5B8DEF">包容值 ' + (100 - w.aggression) + '%</span></div>' +
+    '<input type="range" min="0" max="100" step="1" value="' + w.aggression + '" class="crg" id="aggRange" oninput="app.onAggression(this.value)" onchange="app.commitAggression()">' +
+    '<div style="font-size:10px;color:var(--sub);margin-top:8px;line-height:1.6">勇气值>50%：第5天登录可触发「独自外出追蝴蝶」战功事件；胆小值高：陌生人来访会躲起来<br>冲动值与攻击值同时>60%：出门会触发「街头大战」事件，打赢可得「街头硬汉」勋章</div></div>';
 
   const entries = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px">' +
     ENTRIES.map((e) => entryTile(e, level)).join('') + '</div>';
@@ -181,14 +191,18 @@ const TAB_RENDERERS = {
   sport: () => renderVenueTab('sport'),
   fun: () => renderVenueTab('fun'),
   medal: renderMedalTab,
+  decor: renderDecorTab,
 };
 
 function renderOverviewTab() {
   const w = worldPet();
   const level = worldLevel();
+  const t = derivedTraits(w, curPet());
   const lines = [
     w.jobLv > 0 ? '💼 已完成打工 ' + w.jobLv + ' 次 · 累计获得金币A' : '',
     '🎓 课程结业进度：' + ['未结业', '初级', '进阶', '高级'][w.courseLv] + '（影响可接打工等级）',
+    '🏅 战功 ' + homeMerit() + ' 点 · 已收藏勋章 ' + (S.world.medals || []).length + ' 枚',
+    '🧭 性格画像：勇气 ' + t.courage + '% · 捣蛋 ' + t.mischief + '% · 活力 ' + t.lively + '% · 探索 ' + t.explore + '% · 黏人 ' + t.clingy + '% · 贪吃 ' + t.greedy + '%',
     '🦋 勇气值 ' + w.courage + '% · ' + (w.courage > 50 ? '有机会触发「蝶舞之约」' : '胆小值偏高，容易躲起来'),
     '🏟️ 运动馆/娱乐馆：' + (level >= VENUE_UNLOCK_LEVEL
       ? '已解锁，消耗金币A锻炼玩耍'
@@ -292,6 +306,108 @@ function renderMedalTab() {
   return rows + '<div style="font-size:10px;color:#8A99AB;margin-top:4px">特定事件与战功系统：属性值决定触发哪类事件与战功，更多战功随版本更新</div>';
 }
 
+/* ---------------- 家园 tab：主题 / 外观 / 家具 / 性格画像 / 事件日志 ---------------- */
+
+/** 派生性格的中文名与说明（对齐 2D 小游戏的六性格） */
+const TRAIT_VIEW = [
+  { k: 'courage', n: '勇气值', hint: '高勇气会追蝴蝶、面对挑战' },
+  { k: 'mischief', n: '捣蛋值', hint: '高捣蛋会拆家、触发打架事件' },
+  { k: 'lively', n: '活力值', hint: '影响跑动与陪玩频率' },
+  { k: 'explore', n: '探索值', hint: '高探索更爱嗅探与探险' },
+  { k: 'clingy', n: '黏人值', hint: '高黏人更频繁求抚摸' },
+  { k: 'greedy', n: '贪吃值', hint: '高贪吃更馋、吃饭心情加成' },
+];
+
+function renderDecorTab() {
+  const home = homeState();
+  const pet = curPet();
+  const w = worldPet();
+  const traits = derivedTraits(w, pet);
+  const cur = themeById(home.theme);
+
+  const themeRows = THEMES.map((t) => {
+    const owned = home.themes.includes(t.id);
+    const isCur = home.theme === t.id;
+    const btn = isCur
+      ? '<button class="btn btn-sm" disabled>使用中</button>'
+      : owned
+        ? '<button class="btn btn-sm" onclick="app.useHomeTheme(\'' + t.id + '\')">使用</button>'
+        : '<button class="btn btn-sm" ' + (S.world.coinA < t.price ? 'disabled' : '') + ' onclick="app.buyHomeTheme(\'' + t.id + '\')">🪙' + t.price + '</button>';
+    return '<div class="card" style="padding:11px 14px;margin-bottom:9px;display:flex;align-items:center;gap:10px">' +
+      '<div style="width:38px;height:38px;border-radius:12px;flex:none;background:linear-gradient(135deg,' + t.sky[0] + ',' + t.sky[1] + ');border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>' +
+      '<div style="flex:1;min-width:0"><b style="font-size:12.5px">' + t.ic + ' ' + t.n + '</b>' +
+      '<div style="font-size:10px;color:var(--sub);margin-top:2px">' + t.desc + '</div></div>' + btn + '</div>';
+  }).join('');
+
+  const outfitRows = OUTFITS.map((o) => {
+    const owned = home.outfit.owned.includes(o.id);
+    const wearing = home.outfit.worn[o.slot] === o.id;
+    const btn = owned
+      ? '<button class="btn btn-sm" onclick="app.toggleHomeOutfit(\'' + o.id + '\')">' + (wearing ? '脱下' : '穿戴') + '</button>'
+      : '<button class="btn btn-sm" ' + (S.world.coinA < o.price ? 'disabled' : '') + ' onclick="app.buyHomeOutfit(\'' + o.id + '\')">🪙' + o.price + '</button>';
+    const slotName = o.slot === 'hat' ? '头饰' : (o.slot === 'glasses' ? '眼镜' : '脖子饰品');
+    return '<div class="card" style="padding:11px 14px;margin-bottom:9px;display:flex;align-items:center;gap:10px">' +
+      '<div style="width:38px;height:38px;border-radius:12px;flex:none;background:rgba(139,92,246,.1);display:flex;align-items:center;justify-content:center;font-size:20px">' + o.ic + '</div>' +
+      '<div style="flex:1;min-width:0"><b style="font-size:12.5px">' + o.n + '</b>' +
+      '<div style="font-size:10px;color:var(--sub);margin-top:2px">' + slotName + (wearing ? ' · 穿戴中' : (owned ? ' · 可穿戴' : ' · 买来即可变身')) + '</div></div>' + btn + '</div>';
+  }).join('');
+
+  const furnRows = FURNITURE.map((f) => {
+    const owned = home.furniture.find((x) => x.id === f.id);
+    const slotBtns = owned
+      ? f.slots.map((_, i) => '<button class="btn btn-sm" style="width:auto;padding:5px 9px' + (owned.slot === i ? ';outline:2px solid var(--blue-d)' : '') + '" onclick="app.placeHomeFurniture(\'' + f.id + '\',' + i + ')">位' + (i + 1) + '</button>').join('')
+      : '';
+    const btn = owned
+      ? '<div style="display:flex;gap:5px;align-items:center;flex:none">' + slotBtns + '<button class="btn btn-sm" onclick="app.removeHomeFurniture(\'' + f.id + '\')">收回</button></div>'
+      : '<button class="btn btn-sm" ' + (S.world.coinA < f.price ? 'disabled' : '') + ' onclick="app.buyHomeFurniture(\'' + f.id + '\')">🪙' + f.price + '</button>';
+    return '<div class="card" style="padding:11px 14px;margin-bottom:9px;display:flex;align-items:center;gap:10px">' +
+      '<div style="width:38px;height:38px;border-radius:12px;flex:none;background:rgba(232,148,90,.12);display:flex;align-items:center;justify-content:center;font-size:20px">' + f.ic + '</div>' +
+      '<div style="flex:1;min-width:0"><b style="font-size:12.5px">' + f.n + '</b>' +
+      '<div style="font-size:10px;color:var(--sub);margin-top:2px">' + (owned ? '已摆进院子 · 可换机位' : '买回院子自由摆放') + '</div></div>' + btn + '</div>';
+  }).join('');
+
+  const traitRows = TRAIT_VIEW.map((t) =>
+    '<div style="display:flex;align-items:center;gap:8px;padding:6px 0">' +
+    '<span style="font-size:11.5px;font-weight:700;width:52px">' + t.n + '</span>' +
+    '<div class="statbar" style="flex:1"><div class="statfill" style="width:' + traits[t.k] + '%;background:linear-gradient(90deg,#B79BF2,#8B5CF6)"></div></div>' +
+    '<b style="font-size:11px;width:32px;text-align:right">' + traits[t.k] + '%</b></div>' +
+    '<div style="font-size:9.5px;color:var(--sub);margin:-3px 0 4px 60px">' + t.hint + '</div>').join('');
+
+  const logs = (home.logs || []).slice(0, 12).map((l) => {
+    const d = new Date(l.t);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return '<div style="font-size:11px;color:var(--sub);padding:5px 0;border-bottom:1px solid rgba(0,0,0,.05)">🕐 ' + hh + ':' + mm + ' · ' + esc(l.text) + '</div>';
+  }).join('');
+
+  return '<div class="card" style="padding:13px 15px;margin-bottom:10px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="font-size:13px">家园主题</b>' +
+    '<span style="font-size:10px;color:var(--sub)">当前：' + cur.ic + ' ' + cur.n + '</span></div>' +
+    themeRows +
+    '<div style="font-size:10px;color:var(--sub);margin-top:4px">主题会立刻改变 3D 院子的小屋、草地与天空配色 · 用金币A购买，永久拥有</div></div>' +
+    '<div class="card" style="padding:13px 15px;margin-bottom:10px"><b style="font-size:13px">宠物外观</b>' + outfitRows +
+    '<div style="font-size:10px;color:var(--sub);margin-top:4px">穿戴后立刻出现在 3D 院子里的它身上</div></div>' +
+    '<div class="card" style="padding:13px 15px;margin-bottom:10px"><b style="font-size:13px">院子家具</b>' + furnRows +
+    '<div style="font-size:10px;color:var(--sub);margin-top:4px">家具摆进院子后可换机位 · 收回仓库退还金币A</div></div>' +
+    '<div class="card" style="padding:13px 15px;margin-bottom:10px"><b style="font-size:13px">性格画像</b>' + traitRows +
+    '<div style="font-size:10px;color:var(--sub);margin-top:6px">由勇气 / 冲动 / 攻击、六维与抚摸次数实时派生（上方的三项滑杆会立刻改变它）</div></div>' +
+    '<div class="card" style="padding:13px 15px;margin-bottom:10px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">事件日志</b>' +
+    '<span style="font-size:10px;color:var(--sub)">战功 ' + homeMerit() + ' 点</span></div>' +
+    (logs || '<div style="font-size:11px;color:var(--sub);padding-top:6px">暂无事件 · 在 3D 院子里待一会儿就会有</div>') + '</div>' +
+    '<div class="card" style="padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px">' +
+    '<div style="flex:1"><b style="font-size:12.5px">🌈 思念模式</b>' +
+    '<div style="font-size:10px;color:var(--sub);margin-top:2px">开启后它会一直留在家里，说话的语气也会变得温柔</div></div>' +
+    '<button class="btn btn-sm" onclick="app.toggleMemorial()">' + (home.memorial ? '已开启' : '开启') + '</button></div>';
+}
+
+/** 思念模式开关（开/关后刷新面板） */
+function toggleMemorial() {
+  const on = toggleHomeMemorial();
+  renderWorld();
+  return on;
+}
+
 /* ---------------- 交互 ---------------- */
 
 /** 勇气滑块拖动：只改数值与标签，松手才落盘 */
@@ -309,6 +425,44 @@ function onCourage(value) {
 
 function commitCourage() {
   worldPet(); // 确保已建档
+  save();
+  renderWorld();
+}
+
+/** 冲动值滑杆（拖动时只改数值，松开才落盘刷新） */
+function onImpulse(value) {
+  const w = worldPet();
+  w.impulse = Math.max(0, Math.min(100, parseInt(value, 10) || 0));
+  const box = $('impRange');
+  if (!box) return;
+  const labels = box.parentElement.querySelectorAll('span');
+  if (labels.length >= 2) {
+    labels[0].textContent = '冲动值 ' + w.impulse + '%';
+    labels[1].textContent = '稳重值 ' + (100 - w.impulse) + '%';
+  }
+}
+
+function commitImpulse() {
+  worldPet();
+  save();
+  renderWorld();
+}
+
+/** 攻击值滑杆 */
+function onAggression(value) {
+  const w = worldPet();
+  w.aggression = Math.max(0, Math.min(100, parseInt(value, 10) || 0));
+  const box = $('aggRange');
+  if (!box) return;
+  const labels = box.parentElement.querySelectorAll('span');
+  if (labels.length >= 2) {
+    labels[0].textContent = '攻击值 ' + w.aggression + '%';
+    labels[1].textContent = '包容值 ' + (100 - w.aggression) + '%';
+  }
+}
+
+function commitAggression() {
+  worldPet();
   save();
   renderWorld();
 }
@@ -436,6 +590,10 @@ registerActions('world-panel', {
   gotoWorldFromCard,
   onCourage,
   commitCourage,
+  onImpulse,
+  commitImpulse,
+  onAggression,
+  commitAggression,
   doCourse,
   confirmCourse,
   doJob,
@@ -443,4 +601,5 @@ registerActions('world-panel', {
   buyGood,
   doVenue,
   settleVenue,
+  toggleMemorial,
 });

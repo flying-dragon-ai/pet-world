@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>模型体检 · w3d</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #101820; overflow: hidden; }
+  #out { position: fixed; left: 8px; top: 8px; z-index: 9; color: #9fe8b0; font: 12px/1.5 ui-monospace, Consolas, monospace; white-space: pre; }
+  #out .k { color: #7fd3ff; }
+  #out .bad { color: #ff8f8f; }
+</style>
+</head>
+<body>
+<div id="out">loading…</div>
+<script src="../assets/js/vendor/three.min.js"></script>
+<script src="../assets/js/vendor/GLTFLoader.js"></script>
+<script>
+/**
+ * 单模型体检页（开发用，不进 dist）。
+ *
+ *   dev/model-check.html?m=assets/models/pets/cat.glb
+ *
+ * 用项目同款的 three r128 + GLTFLoader 把模型装到舞台上，按 pet.js 的规则
+ * （包围盒归一化到 1.25m、脚底贴地）摆好，播第一个 clip 的一帧，然后把
+ * 结果写进 window.__RESULT，供自动化面板读取：
+ *   { ok, url, bytes, clips, pick: {idle, walk, run}, tris, size, error }
+ * 页面同时把结果贴到左上角，人眼也能看。
+ */
+(function () {
+  const params = new URLSearchParams(location.search);
+  const url = params.get('m') || '../assets/models/pets/cat.glb';
+  const out = document.getElementById('out');
+  const RESULT = (window.__RESULT = { ok: false, url, clips: [], tris: 0, size: [0, 0, 0], pick: {}, error: null });
+
+  function show(lines) {
+    out.innerHTML = lines.map((l) => l.replace(/^([^:]+):/, '<span class="k">$1</span>:')).join('\n');
+  }
+  function fail(msg) {
+    RESULT.error = String(msg);
+    show([`OK: false`, `ERR: ${msg}`]);
+    document.title = 'FAIL ' + msg;
+  }
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  document.body.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1d2b24);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x334422, 1.1));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+  sun.position.set(4, 7, 5);
+  scene.add(sun);
+  scene.add(new THREE.Mesh(
+    new THREE.CircleGeometry(9, 32),
+    new THREE.MeshStandardMaterial({ color: 0x4d7a4a, roughness: 1 }),
+  ).rotateX(-Math.PI / 2));
+
+  const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 200);
+
+  let mixer = null;
+  const clock = new THREE.Clock();
+
+  new THREE.GLTFLoader().load(
+    url,
+    (gltf) => {
+      try {
+        const model = gltf.scene;
+        const box = new THREE.Box3().setFromObject(model);
+        const height = Math.max(box.max.y - box.min.y, 0.001);
+        model.scale.setScalar(1.25 / height);
+        const fitted = new THREE.Box3().setFromObject(model);
+        model.position.set(-(fitted.max.x + fitted.min.x) / 2, -fitted.min.y, -(fitted.max.z + fitted.min.z) / 2);
+        model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        scene.add(model);
+
+        const clips = (gltf.animations || []).map((c) => c.name);
+        // 与 views/w3d/pet.js 的取用规则保持一致：idle / walk / run
+        const pickOf = (re) => (clips.find((n) => re.test(n)) || null);
+        const pick = {
+          idle: pickOf(/survey|idle/i) || clips[0] || null,
+          walk: pickOf(/walk/i) || null,
+          run: pickOf(/run|gallop|fly|swim|dash/i) || null,
+        };
+
+        if (gltf.animations && gltf.animations.length) {
+          mixer = new THREE.AnimationMixer(model);
+          mixer.clipAction(gltf.animations[0]).play();
+          mixer.update(0.6);
+        }
+
+        let tris = 0;
+        model.traverse((o) => {
+          if (o.isMesh && o.geometry) {
+            const g = o.geometry;
+            tris += (g.index ? g.index.count : (g.attributes.position ? g.attributes.position.count : 0)) / 3;
+          }
+        });
+        const size = new THREE.Vector3();
+        new THREE.Box3().setFromObject(model).getSize(size);
+
+        Object.assign(RESULT, {
+          ok: true,
+          clips,
+          pick,
+          tris: Math.round(tris),
+          size: [+size.x.toFixed(2), +size.y.toFixed(2), +size.z.toFixed(2)],
+        });
+        show([
+          'OK: true',
+          `URL: ${url}`,
+          `CLIPS: ${clips.join(', ') || '(none)'}`,
+          `PICK: idle=${pick.idle} walk=${pick.walk} run=${pick.run}`,
+          `TRIS: ${RESULT.tris}`,
+          `SIZE: ${RESULT.size.join(' x ')} m`,
+        ]);
+        document.title = 'OK ' + clips.length + ' clips';
+
+        // 相机对准模型整体
+        const radius = Math.max(size.x, size.y, size.z) * 1.9 + 1.2;
+        camera.position.set(radius * 0.75, size.y * 1.05, radius);
+        camera.lookAt(0, size.y * 0.45, 0);
+      } catch (err) {
+        fail(err && err.message ? err.message : err);
+      }
+    },
+    undefined,
+    (err) => fail(err && err.message ? err.message : 'load error'),
+  );
+
+  function tick() {
+    requestAnimationFrame(tick);
+    if (mixer) mixer.update(Math.min(clock.getDelta(), 0.05));
+    renderer.render(scene, camera);
+  }
+  tick();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
+</script>
+</body>
+</html>

@@ -13,17 +13,21 @@
 import { save } from '../../app/store.js';
 import { registerActions } from '../../app/actions.js';
 import { applyGain } from '../../domain/world.js';
-import { worldPet } from '../world-state.js';
+import { worldPet, registerWorldHooks } from '../world-state.js';
 import { getStage } from './ctx.js';
-import { suspendStage } from './stage.js';
+import { suspendStage, applyHomeLook } from './stage.js';
 import { registerStageHooks } from './interactions.js';
+import { applyPostEvent, tickEvents } from './events.js';
 
 export {
   enterStage, exitStage, suspendStage, resumeStage, layoutStage, fallbackStage,
-  isStageActive, isStageSuspended, stageWeather, suspendStage,
+  isStageActive, isStageSuspended, stageWeather,
 } from './stage.js';
 export { sendStageToast, sayInStage, spawnFx, emote } from './fx.js';
 export { applyManualAction as w3dAct, openSpotTab, registerStageHooks } from './interactions.js';
+export { applyHomeLook } from './stage.js';
+export { applyPostEvent, tickEvents };
+export { openChat, closeChat, chatSend } from './chat.js';
 
 /**
  * 直接增减六维（首页快捷打卡用）。
@@ -38,4 +42,7 @@ export function w3dGain(delta) {
 
 registerStageHooks({ suspendStage });
 
-registerActions('w3d', { w3dGain });
+/** 家园外观变化（主题 / 家具 / 外观）后，把 3D 场景刷新一遍 */
+registerWorldHooks({ refreshStage: applyHomeLook });
+
+registerActions('w3d', { w3dGain, applyPostEvent });

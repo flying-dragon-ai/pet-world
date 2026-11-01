@@ -179,7 +179,11 @@ body{margin:0;font-family:'PingFang SC','Noto Sans SC','HarmonyOS Sans SC',Robot
 #w3dBox{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);transform-origin:center center}
 #w3dGL{position:absolute;inset:0}
 #w3dGL canvas{display:block}
-#w3dHudTop{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;gap:8px;padding:10px 12px;pointer-events:none}
+#w3dHudTop{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px;pointer-events:none}
+#w3dHudRow{display:flex;align-items:center;gap:8px}
+#w3dInfo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;pointer-events:none;background:rgba(10,20,40,.38);border-radius:999px;padding:5px 12px;color:rgba(255,255,255,.92);font-size:10.5px;font-weight:700;backdrop-filter:blur(8px);width:fit-content;max-width:100%}
+#w3dInfo .w3d-name{font-size:12px;font-weight:900;color:#fff}
+#w3dInfo .w3d-merit{color:#FFD982}
 #w3dBack{pointer-events:auto;border:none;cursor:pointer;background:rgba(10,20,40,.45);color:#fff;font-size:13px;font-weight:700;padding:8px 15px;border-radius:999px;backdrop-filter:blur(8px)}
 #w3dStats{flex:1;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;min-width:0}
 .w3d-mini{display:flex;align-items:center;gap:4px;background:rgba(10,20,40,.42);border-radius:999px;padding:4px 9px;color:#fff;font-size:10px;backdrop-filter:blur(8px)}
@@ -187,8 +191,8 @@ body{margin:0;font-family:'PingFang SC','Noto Sans SC','HarmonyOS Sans SC',Robot
 .w3d-mini .w3d-mbar i{display:block;height:100%;border-radius:3px}
 .w3d-mini b{font-size:10px;min-width:15px;text-align:right}
 #w3dCoin{pointer-events:auto;background:rgba(245,208,97,.92);color:#6B4E00;font-weight:800;font-size:11px;padding:5px 11px;border-radius:999px;white-space:nowrap}
-#w3dHudBottom{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;gap:10px;padding:12px 14px 16px}
-.w3d-act{border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0;width:76px;border-radius:18px;background:rgba(255,255,255,.92);box-shadow:0 8px 20px rgba(10,25,60,.3);font-size:11px;font-weight:800;color:#2D3A55;transition:transform .15s,opacity .2s}
+#w3dHudBottom{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;flex-wrap:wrap;gap:7px;padding:10px 12px 14px}
+.w3d-act{border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0;width:64px;border-radius:16px;background:rgba(255,255,255,.92);box-shadow:0 8px 20px rgba(10,25,60,.3);font-size:10.5px;font-weight:800;color:#2D3A55;transition:transform .15s,opacity .2s}
 .w3d-act:active{transform:scale(.93)}
 .w3d-act span{font-size:19px}
 .w3d-act.cd{opacity:.45}
@@ -200,3 +204,18 @@ body{margin:0;font-family:'PingFang SC','Noto Sans SC','HarmonyOS Sans SC',Robot
 .w3d-fx-i{position:absolute;z-index:7;font-size:22px;animation:w3dFloat 1.1s ease forwards;pointer-events:none;transform:translate(-50%,-50%)}
 @keyframes w3dFloat{from{opacity:1;margin-top:0}to{opacity:0;margin-top:-64px}}
 #w3dFall{position:absolute;inset:0;z-index:9;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:linear-gradient(160deg,#1B2A4A,#22355C);color:#fff;text-align:center;padding:30px}
+
+/* ===== V1.10 3D 舞台：聊天面板（对齐《虚拟宠物家园》的宠物聊天） ===== */
+#w3dChat{position:absolute;right:14px;top:76px;width:300px;max-width:46%;z-index:9;display:none;flex-direction:column;background:rgba(255,255,255,.96);border-radius:18px;box-shadow:0 18px 44px rgba(10,25,60,.35);overflow:hidden}
+#w3dChat.show{display:flex}
+#w3dChatHead{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:linear-gradient(135deg,#8FCF9E,#6FB581);color:#fff;font-size:12.5px;font-weight:800}
+#w3dChatHead button{border:none;background:rgba(255,255,255,.25);color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1}
+#w3dChatBox{max-height:210px;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:7px;background:#FFFDF7}
+#w3dChatBox .msg{max-width:82%;font-size:11.5px;line-height:1.6;padding:7px 11px;border-radius:12px}
+#w3dChatBox .msg.pet{align-self:flex-start;background:#EDF7EE;color:#3B5340}
+#w3dChatBox .msg.me{align-self:flex-end;background:#E8F0FE;color:#2D3A55}
+#w3dChatQuick{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;border-top:1px solid rgba(0,0,0,.06)}
+#w3dChatQuick button{border:none;cursor:pointer;background:#F1F5F9;color:#4A5768;font-size:10.5px;font-weight:700;padding:5px 10px;border-radius:999px}
+#w3dChatRow{display:flex;gap:6px;padding:8px 10px 10px;border-top:1px solid rgba(0,0,0,.06)}
+#w3dChatIn{flex:1;min-width:0;border:1px solid rgba(0,0,0,.12);border-radius:999px;padding:8px 12px;font-size:12px;font-family:inherit;outline:none}
+#w3dChatRow button{border:none;cursor:pointer;background:linear-gradient(135deg,#8FCF9E,#6FB581);color:#fff;font-size:11.5px;font-weight:800;padding:0 14px;border-radius:999px}

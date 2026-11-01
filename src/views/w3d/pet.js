@@ -7,6 +7,8 @@ import { S } from '../../app/store.js';
 import { PET_MODELS } from '../../data/w3d-assets.js';
 import { getStage } from './ctx.js';
 import { curPet } from '../pets.js';
+import { homeState } from '../world-state.js';
+import { outfitById } from '../../domain/w3d.js';
 
 const MODEL_TIMEOUT_MS = 8000;
 const FADE_SECONDS = 0.3;
@@ -84,6 +86,7 @@ function mountPet(model, clips) {
 
   s.scene.add(group);
   s.pet = group;
+  applyOutfitToPet();
   s.petInner = model;
 
   if (clips && clips.length) {
@@ -160,10 +163,82 @@ export function useFallbackPet() {
 
   s.scene.add(group);
   s.pet = group;
+  applyOutfitToPet();
   s.petInner = null;
   s.mixer = null;
   s.actions = null;
   s.fallbackParts = { body, head, tail, legs };
+}
+
+/* ---------------- 宠物外观（帽子 / 眼镜 / 脖子饰品） ---------------- */
+
+/** 各种挂件的颜色 */
+const ACC_COLORS = {
+  scarf: 0xD9534F,
+  bow: 0xE8709A,
+  glasses: 0x37415C,
+  sunglass: 0x1F2430,
+  tophat: 0x2D3A55,
+  cap: 0x5B8DEF,
+};
+
+/** 造一个挂件模型（挂在宠物外层 group 上，坐标按 ~1.25m 身高的宠物估算） */
+function buildAccessory(id) {
+  const o = outfitById(id);
+  if (!o) return null;
+  const color = ACC_COLORS[id] || 0xE8709A;
+  const mat = new THREE.MeshLambertMaterial({ color });
+  const group = new THREE.Group();
+
+  if (o.slot === 'hat') {
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 16), mat);
+    brim.position.set(0, 1.14, 0.16);
+    group.add(brim);
+    const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.19, 0.3, 16), mat);
+    crown.position.set(0, 1.3, 0.16);
+    group.add(crown);
+  } else if (o.slot === 'glasses') {
+    const lensMat = new THREE.MeshBasicMaterial({ color });
+    const left = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.04), lensMat);
+    left.position.set(-0.13, 1.0, 0.3);
+    group.add(left);
+    const right = left.clone();
+    right.position.x = 0.13;
+    group.add(right);
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.03, 0.04), lensMat);
+    bridge.position.set(0, 1.0, 0.3);
+    group.add(bridge);
+  } else {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.055, 8, 20), mat);
+    band.rotation.x = Math.PI / 2;
+    band.position.set(0, 0.78, 0.12);
+    group.add(band);
+    if (id === 'bow') {
+      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), mat);
+      knot.position.set(0.2, 0.78, 0.24);
+      group.add(knot);
+    }
+  }
+  return group;
+}
+
+/** 按当前家园状态重新给宠物穿戴外观 */
+export function applyOutfitToPet() {
+  const s = getStage();
+  if (!s || !s.pet) return;
+  const old = s.pet.userData.acc || [];
+  old.forEach((mesh) => s.pet.remove(mesh));
+  const acc = [];
+  const worn = (homeState().outfit || {}).worn || {};
+  Object.keys(worn).forEach((slot) => {
+    const id = worn[slot];
+    if (!id) return;
+    const mesh = buildAccessory(id);
+    if (!mesh) return;
+    s.pet.add(mesh);
+    acc.push(mesh);
+  });
+  s.pet.userData.acc = acc;
 }
 
 export function removePet() {

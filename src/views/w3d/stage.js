@@ -8,15 +8,33 @@ import { $ } from '../../app/dom.js';
 import { S } from '../../app/store.js';
 import { go } from '../../app/router.js';
 import { registerActions } from '../../app/actions.js';
-import { needRotate } from '../../domain/w3d.js';
+import { needRotate, themeById, dayIndexOf, seasonIndexOf } from '../../domain/w3d.js';
 import { getStage, setStage, isStageActive, isStageSuspended } from './ctx.js';
-import { buildScene } from './scene.js';
-import { loadPet, removePet } from './pet.js';
+import { buildScene, applyThemeToScene, applySeasonToScene, syncFurniture } from './scene.js';
+import { loadPet, removePet, applyOutfitToPet } from './pet.js';
 import { bindInput } from './input.js';
 import { refreshHud } from './hud.js';
 import { tick } from './tick.js';
 import { currentWeather } from './weather.js';
-import { worldLevel } from '../world-state.js';
+import { worldLevel, homeState } from '../world-state.js';
+import { SEASONS } from '../../data/w3d-assets.js';
+
+/**
+ * 把当前家园状态刷到舞台上：主题配色、季节、院子家具、宠物外观。
+ * 进世界、买主题/家具/换装、换宠物之后都会调它。
+ */
+export function applyHomeLook() {
+  const s = getStage();
+  if (!s) return;
+  const home = homeState();
+  applyThemeToScene(themeById(home.theme));
+  const dayIndex = dayIndexOf(Date.now());
+  s.dayIndex = dayIndex;
+  s.seasonIdx = seasonIndexOf(dayIndex);
+  applySeasonToScene(SEASONS[s.seasonIdx]);
+  syncFurniture();
+  applyOutfitToPet();
+}
 
 /** 创建舞台（只成功一次；失败返回 null） */
 function initStage() {
@@ -68,9 +86,16 @@ function initStage() {
     amb: null,
     fallbackParts: null,
     venuesUnlocked: () => worldLevel() >= 30,
+    props: [],
+    seasonIdx: 0,
+    dayIndex: 0,
+    decayT: 0,
+    saveT: 0,
+    eventT: 0,
   });
 
   buildScene();
+  applyHomeLook();
   loadPet();
   bindInput();
   window.addEventListener('resize', () => {
@@ -137,6 +162,7 @@ export function enterStage() {
     removePet();
     loadPet();
   }
+  applyHomeLook();
 
   getStage().suspended = false;
   layoutStage();

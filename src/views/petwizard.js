@@ -24,7 +24,7 @@ function delPet(){
 const FURS=[['经典橘','#F5B85C'],['奶白','#F1EDE4'],['银灰','#B9BFC9'],['玄黑','#6B6B78'],['奶棕','#C9955C']];
 const AW_ACC=[['无',''],['红项圈','collar'],['蝴蝶结','bow'],['小围巾','scarf'],['生日帽','hat']];
 const AWSAMPLE=['https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=300&h=300&fit=crop','https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=300&h=300&fit=crop'];
-function openAvatarWizard(){ui.avatarWizard={step:1,img:'',fur:'',acc:'',pat:'',low:false};openModal('');renderAW()}
+function openAvatarWizard(){ui.avatarWizard={step:1,img:'',fur:'',acc:'',pattern:'',eye:'',build:'',low:false};openModal('');renderAW()}
 function renderAW(){
   const a=ui.avatarWizard,p=curPet();let h='';
   if(a.step===1){
@@ -43,15 +43,17 @@ function renderAW(){
     h='<div style="font-size:16px;font-weight:900;margin-bottom:4px">生成虚拟形象 · 2/4 AI生成</div><div style="text-align:center;padding:8px 0"><div class="spin" style="border-color:rgba(58,123,213,.25);border-top-color:var(--blue-d)"></div><div style="font-size:12.5px;color:var(--sub);margin-top:12px">AI 正在为 '+p.name+' 生成3D虚拟形象<br>（≤15s，演示已加速）</div></div>';
     setTimeout(()=>{if(ui.avatarWizard.step===2&&$('modalWrap').classList.contains('show')){ui.avatarWizard.step=3;renderAW()}},1800);
   } else if(a.step===3){
-    const prev={...p,fur:a.fur,acc:a.acc};
+    const prev={...p,fur:a.fur,acc:a.acc,build:a.build};
     h='<div style="font-size:16px;font-weight:900;margin-bottom:6px">生成虚拟形象 · 3/4 六项微调</div>'+
     '<div style="text-align:center;margin-bottom:10px"><div style="width:120px;height:120px;display:inline-block">'+petSVG(prev,120,'happy')+'</div></div>'+
     '<div style="font-size:11px;font-weight:700;margin-bottom:5px">毛色</div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">'+FURS.map(f=>'<button class="skuBtn'+(a.fur===f[1]?' act':'')+'" style="padding:6px 10px" onclick="app.awSet(\'fur\',\''+f[1]+'\')">'+f[0]+'</button>').join('')+'</div>'+
     '<div style="font-size:11px;font-weight:700;margin-bottom:5px">配饰</div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">'+AW_ACC.map(x=>'<button class="skuBtn'+(a.acc===x[1]?' act':'')+'" style="padding:6px 10px" onclick="app.awSet(\'acc\',\''+x[1]+'\')">'+x[0]+'</button>').join('')+'</div>'+
-    '<div style="font-size:11px;font-weight:700;margin-bottom:5px">花纹 · 眼型 · 体型（组合记录）</div><div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+['纯色·圆眼·标准','斑点·杏眼·偏瘦','条纹·圆眼·圆润'].map(t=>'<button class="skuBtn'+(a.pat===t?' act':'')+'" style="padding:6px 10px" onclick="app.awSet(\'pat\',\''+t+'\')">'+t+'</button>').join('')+'</div>'+
+    '<div style="font-size:11px;font-weight:700;margin-bottom:5px">花纹</div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">'+['纯色','斑点','条纹','虎斑'].map(t=>'<button class="skuBtn'+(a.pattern===t?' act':'')+'" style="padding:6px 10px" onclick="app.awSet(\'pattern\',\''+t+'\')">'+t+'</button>').join('')+'</div>'+
+    '<div style="font-size:11px;font-weight:700;margin-bottom:5px">眼型</div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">'+['圆眼','杏眼','桃花眼'].map(t=>'<button class="skuBtn'+(a.eye===t?' act':'')+'" style="padding:6px 10px" onclick="app.awSet(\'eye\',\''+t+'\')">'+t+'</button>').join('')+'</div>'+
+    '<div style="font-size:11px;font-weight:700;margin-bottom:5px">体型</div><div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">'+['偏瘦','标准','圆润'].map(t=>'<button class="skuBtn'+(a.build===t?' act':'')+'" style="padding:6px 10px" onclick="app.awSet(\'build\',\''+t+'\')">'+t+'</button>').join('')+'</div>'+
     '<div style="display:flex;gap:8px"><button class="btn btn-ghost" style="flex:1" onclick="ui.avatarWizard.step=2;app.renderAW()">重新生成</button><button class="btn" style="flex:1" onclick="ui.avatarWizard.step=4;app.renderAW()">下一步</button></div>';
   } else {
-    const prev={...p,fur:a.fur,acc:a.acc};
+    const prev={...p,fur:a.fur,acc:a.acc,build:a.build};
     h='<div style="font-size:16px;font-weight:900;margin-bottom:6px">生成虚拟形象 · 4/4 定稿</div>'+
     '<div style="text-align:center;margin-bottom:8px"><div style="width:110px;height:110px;display:inline-block">'+petSVG(prev,110,'happy')+'</div></div>'+
     '<div class="card" style="padding:9px 12px;font-size:11px;color:var(--warn);margin-bottom:10px;background:rgba(245,166,35,.1);border-color:rgba(245,166,35,.35)">定稿后模型与配饰不可修改，请确认预览效果</div>'+
@@ -65,7 +67,9 @@ function awCheck(){ui.avatarWizard.step=1.5;renderAW();setTimeout(()=>{if(ui.ava
 function awSet(k,v){ui.avatarWizard[k]=v;renderAW()}
 function awDone(){
   const a=ui.avatarWizard,p=curPet();
-  p.fur=a.fur||'';p.acc=a.acc||'';p.pat=a.pat||'';
+  p.fur=a.fur||'';p.acc=a.acc||'';
+  p.pattern=a.pattern||'';p.eye=a.eye||'';p.build=a.build||'';
+  p.pat=[p.pattern,p.eye,p.build].filter(Boolean).join('·');
   save();closeModal();
   openWorld();
   toast('形象已定稿，「'+p.name+'」换新形象入驻人宠世界');

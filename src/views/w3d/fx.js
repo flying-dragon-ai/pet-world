@@ -16,11 +16,24 @@ export function sayInStage(text) {
 }
 
 /** 宠物做一个表情动作（jump / play） */
+const EMOTE_STATE = {
+  play: 'play',
+  jump: 'jump',
+  happy: 'happy',
+  eat: 'eat',
+  shake: 'shake',
+  wag: 'wag',
+  nod: 'nod',
+  lie: 'lie',
+};
+
+/** 宠物做一个表情动作（play / happy / eat / shake / wag / nod / lie） */
 export function emote(kind) {
   const s = getStage();
   if (!s) return;
-  s.ai.state = kind === 'play' ? 'play' : 'jump';
-  s.ai.t = kind === 'play' ? 2.6 : 1.4;
+  const state = EMOTE_STATE[kind] || 'jump';
+  s.ai.state = state;
+  s.ai.t = state === 'play' || state === 'happy' ? 2.6 : (state === 'eat' || state === 'shake' ? 2.2 : 1.6);
 }
 
 /** 在宠物头顶飘三个小图标（世界坐标 → 屏幕坐标） */

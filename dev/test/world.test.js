@@ -6,7 +6,7 @@ import {
   applyCostAndGain, missingAttrs, negate, attrDeltaText, attrDeltaHTML,
   pendingEvents, settleOffline, WELCOME_BACK_HOURS,
 } from '../../src/domain/world.js';
-import { COURSES, JOBS, GOODS, VENUES, WORLD_EVENTS, MEDALS } from '../../src/data/world-tables.js';
+import { COURSES, JOBS, GOODS, VENUES, WORLD_EVENTS, ALL_WORLD_EVENTS, MEDALS } from '../../src/data/world-tables.js';
 
 /* ---------- 六维与等级曲线 ---------- */
 
@@ -102,7 +102,12 @@ test('蝶舞之约：登录满 5 天且勇气 > 50 才触发，只触发一次',
 });
 
 test('事件表与战功目录一一对应', () => {
-  assert.equal(MEDALS.length, WORLD_EVENTS.length);
+  // V1.10 起战功目录由「登录时判定事件 + 运行时判定事件」共同派生，二者必须同长同序。
+  assert.equal(MEDALS.length, ALL_WORLD_EVENTS.length);
+  assert.ok(
+    ALL_WORLD_EVENTS.every((ev, i) => MEDALS[i].id === ev.id),
+    '每条事件都有同名勋章',
+  );
   assert.equal(MEDALS[0].id, 'butterfly');
   assert.equal(WORLD_EVENTS[0].gain.growth, 5);
 });

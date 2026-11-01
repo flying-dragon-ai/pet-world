@@ -10,6 +10,8 @@ import { renderHealth } from './grow.js';
 import { RTYPES, recCard, rmDays } from './records.js';
 import { needNet } from './../app/shell.js';
 import { registerPage } from './../app/router.js';
+import { breedRefOf } from './../data/pet-sizes.js';
+import { sizeSummaryOf, bcsOf, growthStageOf } from './../domain/pet.js';
 function renderMe(){
   const ent=[
     ['我的宠物','i-paw','#E8945A','go(\'profile\')'],
@@ -80,7 +82,7 @@ export function renderProfile(){
   const tabs=[['album','成长记录'],['remind','提醒'],['family','共享'],['monitor','监控']];
   $('profile-body').innerHTML=
   '<div class="subhdr"><svg class="icon" style="cursor:pointer" onclick="app.go(\'me\')"><use href="#i-back"/></svg><b style="font-size:15px">宠物档案</b><span style="margin-left:auto;cursor:pointer" onclick="ui.profileEditingPetId=\''+p.id+'\';app.go(\'petedit\')"><svg class="icon"><use href="#i-edit"/></svg></span></div>'+
-  '<div class="card" style="margin:12px 16px 12px;padding:16px;display:flex;gap:13px;align-items:center"><div style="width:74px;height:74px;border-radius:24px;overflow:hidden;flex:none">'+petImgTag(p)+'</div><div style="flex:1"><div style="font-size:18px;font-weight:900">'+p.name+' <span class="chip" style="font-size:9.5px">'+p.gender+'</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.6">'+p.species+' · '+p.breed+' · '+petAge(p)+' · '+p.weight+'kg<br>绝育：'+p.neuter+' · 过敏/忌口：'+(p.note||'无')+'</div>'+((p.personality&&p.personality.length)?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">'+p.personality.map(x=>'<span class="chip" style="font-size:9px;padding:2px 8px">性格·'+x+'</span>').join('')+'</div>':'')+(p.important?'<div style="font-size:10.5px;color:#C77E12;margin-top:5px;display:flex;align-items:center;gap:4px;font-weight:600"><svg class="icon icon-s"><use href="#i-alert"/></svg>重要提示：'+esc(p.important)+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm btn-ghost" style="flex:1" onclick="app.openAvatarWizard()">'+(p.fur||p.acc?'重做虚拟形象':'生成虚拟形象')+'</button><button class="btn btn-sm btn-ghost" style="flex:1;color:#F05B5B;border-color:rgba(240,91,91,.3)" onclick="app.delPet()">删除档案</button></div></div></div>'+
+  '<div class="card" style="margin:12px 16px 12px;padding:16px;display:flex;gap:13px;align-items:center"><div style="width:74px;height:74px;border-radius:24px;overflow:hidden;flex:none">'+petImgTag(p)+'</div><div style="flex:1"><div style="font-size:18px;font-weight:900">'+p.name+' <span class="chip" style="font-size:9.5px">'+p.gender+'</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.6">'+p.species+' · '+p.breed+' · '+petAge(p)+' · '+p.weight+'kg<br>绝育：'+p.neuter+' · 过敏/忌口：'+(p.note||'无')+'</div>'+(petSizeLine(p)?'<div style="font-size:11px;color:#3A7BD5;margin-top:4px;line-height:1.6">体型：'+esc(petSizeLine(p))+'</div>':'')+((p.personality&&p.personality.length)?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">'+p.personality.map(x=>'<span class="chip" style="font-size:9px;padding:2px 8px">性格·'+x+'</span>').join('')+'</div>':'')+(p.important?'<div style="font-size:10.5px;color:#C77E12;margin-top:5px;display:flex;align-items:center;gap:4px;font-weight:600"><svg class="icon icon-s"><use href="#i-alert"/></svg>重要提示：'+esc(p.important)+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm btn-ghost" style="flex:1" onclick="app.openAvatarWizard()">'+(p.fur||p.acc?'重做虚拟形象':'生成虚拟形象')+'</button><button class="btn btn-sm btn-ghost" style="flex:1;color:#F05B5B;border-color:rgba(240,91,91,.3)" onclick="app.delPet()">删除档案</button></div></div></div>'+
   /* V1.7.4 健康记录迁移入口条：由档案页迁至「健康管理」页 */
   '<div class="card chov" style="margin:0 16px 12px;padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;background:linear-gradient(135deg,rgba(76,168,118,.09),rgba(59,183,134,.04))" onclick="ui.healthTab=\'rec\';app.go(\'health\')"><div style="width:36px;height:36px;border-radius:12px;background:rgba(76,168,118,.14);display:flex;align-items:center;justify-content:center;flex:none"><svg class="icon icon-s" style="color:#3A9C6B"><use href="#i-med"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700">健康记录 · '+recCnt+' 条 <span class="chip" style="font-size:9px;background:rgba(76,168,118,.14);color:#2E9C6B;padding:1px 7px">已迁移</span></div><div style="font-size:10px;color:var(--sub);margin-top:1px">V1.7.4 起统一在「健康管理」页管理疫苗/驱虫/洗护/就医/饮食</div></div><svg class="icon icon-s" style="color:#C9D2DD;flex:none"><use href="#i-right"/></svg></div>'+
   '<div style="display:flex;gap:7px;padding:0 16px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none">'+tabs.map(t=>'<button class="rTab'+(ui.profTab===t[0]?' act':'')+'" onclick="ui.profTab=\''+t[0]+'\';app.renderProfile()">'+t[1]+'</button>').join('')+'</div>'+
@@ -171,9 +173,20 @@ function joinDemo(k){
   if(k===1)toast('邀请码已过期，请联系所有者重新生成');
   else toast('共享成员已达上限，请联系所有者移除成员后再加入');
 }
+function petSizeLine(p){
+  const bits=[];
+  const s=sizeSummaryOf(p);
+  if(s)bits.push(s);
+  if(p.height)bits.push('肩高'+p.height+'cm');
+  const stage=growthStageOf(p);
+  if(stage&&stage!=='未知')bits.push(stage);
+  return bits.join(' · ');
+}
 function renderPetEdit(){
   const p=S.pets.find(x=>x.id===ui.profileEditingPetId)||{species:'猫',gender:'弟弟',neuter:'未绝育'};
   const opt=(k,vals,cur)=>vals.map(v=>'<button class="skuBtn'+(v===cur?' act':'')+'" data-g="'+k+'" data-v="'+v+'" onclick="document.querySelectorAll(\'[data-g=' + k + ']\').forEach(b=>b.classList.remove(\'act\'));this.classList.add(\'act\')">'+v+'</button>').join('');
+  const ref=breedRefOf(p.breed,p.species);
+  const refHint=ref?('<div style="font-size:10.5px;color:#8FA8C9;margin:-4px 0 10px;line-height:1.6">「'+esc(p.breed)+'」参考区间：体重 '+(ref.weight[0]??'—')+'~'+(ref.weight[1]??'—')+'kg · 肩高 '+ref.height[0]+'~'+ref.height[1]+'cm'+(ref.group?' · '+esc(ref.group):'')+'<br>体型类型按当前体重自动判定</div>'):'';
   $('petedit-body').innerHTML=
   '<div class="subhdr"><svg class="icon" style="cursor:pointer" onclick="app.go(\'profile\')"><use href="#i-back"/></svg><b style="font-size:15px">'+(ui.profileEditingPetId?'编辑':'新建')+'宠物档案</b><span style="margin-left:auto"></span></div>'+
   '<div style="padding:16px">'+
@@ -184,6 +197,9 @@ function renderPetEdit(){
   '<div style="font-size:11px;color:var(--sub);margin:6px 0">性别</div><div style="display:flex;gap:8px;margin-bottom:10px">'+opt('gender',['弟弟','妹妹'],p.gender)+'</div>'+
   '<input class="input pf" data-k="birth" placeholder="生日（如2023-04-12，上限当天）" value="'+(p.birth||'')+'" style="margin-bottom:8px">'+
   '<input class="input pf" data-k="weight" inputmode="decimal" placeholder="当前体重 0.1~100kg" value="'+(p.weight||'')+'" style="margin-bottom:8px">'+
+  '<input class="input pf" data-k="height" inputmode="decimal" placeholder="当前肩高（cm，可留空）" value="'+(p.height||'')+'" style="margin-bottom:8px">'+
+  refHint+
+  '<div style="font-size:11px;color:var(--sub);margin:6px 0">体格</div><div style="display:flex;gap:8px;margin-bottom:10px">'+opt('build',['偏瘦','标准','圆润'],p.build||'标准')+'</div>'+
   '<div style="font-size:11px;color:var(--sub);margin:6px 0">绝育状态</div><div style="display:flex;gap:8px;margin-bottom:10px">'+opt('neuter',['已绝育','未绝育','未知'],p.neuter)+'</div>'+
   '<div style="font-size:11px;color:var(--sub);margin:6px 0">性格属性（可多选）</div><div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">'+['活泼','粘人','高冷','胆小','贪吃','拆家'].map(v=>'<button class="skuBtn'+((p.personality||[]).includes(v)?' act':'')+'" data-pg="personality" data-v="'+v+'" onclick="this.classList.toggle(\'act\')">'+v+'</button>').join('')+'</div>'+
   '<input class="input pf" data-k="note" placeholder="备注：过敏史/忌口 ≤100字（AI导购入参）" value="'+(p.note||'')+'" style="margin-bottom:8px">'+
@@ -200,9 +216,9 @@ function savePet(){
   if(!kv.personality.length)kv.personality=['活泼'];
   if(!kv.species)kv.species='猫';if(!kv.gender)kv.gender='弟弟';if(!kv.neuter)kv.neuter='未绝育';
   const imgMap={'猫':'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?w=200&h=200&fit=crop','狗':'https://images.unsplash.com/photo-1612536057832-2ff7ead58194?w=200&h=200&fit=crop','鸟':'https://images.unsplash.com/photo-1552728084-7afe55122d02?w=200&h=200&fit=crop','异宠':'https://images.unsplash.com/photo-1425082661705-1834bfd09dca?w=200&h=200&fit=crop'};
-  if(ui.profileEditingPetId){const p=S.pets.find(x=>x.id===ui.profileEditingPetId);Object.assign(p,kv);if(kv.weight)p.weight=+kv.weight;toast('档案已更新')}
+  if(ui.profileEditingPetId){const p=S.pets.find(x=>x.id===ui.profileEditingPetId);Object.assign(p,kv);if(kv.weight)p.weight=+kv.weight;if(kv.height)p.height=+kv.height;toast('档案已更新')}
   else{
-    const np={id:uid(),owner:true,img:imgMap[kv.species],color:'',chip:'',...kv,weight:+(kv.weight||0)||''};
+    const np={id:uid(),owner:true,img:imgMap[kv.species],color:'',chip:'',...kv,weight:+(kv.weight||0)||'',height:+(kv.height||0)||'',build:kv.build||'标准'};
     S.pets.push(np);S.curPet=np.id;ui.profileEditingPetId=null;
     save();
     openModal('<div style="text-align:center"><div style="width:90px;margin:0 auto">'+petSVG(np,90,'happy')+'</div><div style="font-size:16px;font-weight:900;margin-top:8px">建档成功！</div><div style="font-size:12px;color:var(--sub);margin:8px 0 14px">是否立即为「'+np.name+'」生成专属虚拟形象？</div><div style="display:flex;gap:10px"><button class="btn btn-ghost" onclick="app.closeModal();app.go(\'profile\')">稍后再说</button><button class="btn" onclick="app.closeModal();app.openAvatarWizard()">立即生成</button></div></div>');

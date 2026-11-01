@@ -33,8 +33,8 @@ export const ui = {
 
   /* 社区 */
   comZone: '推荐',
-  publish: { img: '', media: '图文', zone: '推荐', vid: false, dur: '00:45' },
-  community: { postId: null, reply: null },
+  publish: { img: '', media: '图文', zone: '推荐', vid: false, dur: '00:45', preview: false },
+  community: { postId: null, reply: null, page: 1 },
 
   /* 消息 / 旅行 / 活动 */
   msgTab: '互动',
