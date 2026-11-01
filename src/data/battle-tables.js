@@ -46,7 +46,7 @@ export const BATTLE_FOES = [
   },
   {
     id: 'f8', n: '流浪金毛', species: '狗', breed: '金毛寻回犬', ic: '🦮',
-    atk: 68, def: 68, spd: 58, hp: 96, lv: 45,
+    atk: 68, def: 78, spd: 58, hp: 100, lv: 45,
     d: '曾经的宠物明星，如今靠一身腱子肉与不认输的脾气守着街头。',
   },
 ];

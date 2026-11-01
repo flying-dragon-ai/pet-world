@@ -5,11 +5,11 @@
 > 给接手 Agent 的提示词看 [`HANDOFF-V1.10.md`](HANDOFF-V1.10.md)。
 >
 > **采集环境**：Windows / Git Bash（MSYS）/ Node 24.21.0，仓库根 `D:/temp/宠物世界`。
-> **采集时间**：2026-11-01 09:59–10:08（每条命令的时刻标在输出旁）。
+> **采集时间**：2026-11-01 09:59–10:13（每条命令的时刻标在输出旁）。
 >
 > **必读前提**：写作期间**另有 4 个 Agent 在并行改 `src/`、`dev/`、`assets/`**，条数与行号一直在动。
-> 本文的实测漂移：单测 101→163 项、模块 61→63 个、中文别名 94→98、AI 状态 24→25、GLB 12→17 个
-> （09:59 → 10:07，8 分钟）。所以：
+> 本文的实测漂移：单测 101→163 项、模块 61→63 个、中文别名 94→98、AI 状态 24→25、GLB 12→17 个、
+> 模型库体检从「失败 14 处」到「通过」（09:59 → 10:12，13 分钟）。所以：
 > **① 数字看命令输出，别抄本文；② 行号都配了符号名，`rg -n '<符号名>' <文件>` 可自愈。**
 > 带采集时间的硬数字总表在 [`README.md` 的「硬数字」表](../README.md#硬数字实测快照)。
 
@@ -105,7 +105,7 @@ $ rg -ni "sk-[a-z0-9]{16,}|api[_-]?key\s*[:=]\s*['\"]|bearer\s+[a-z0-9]{20,}|sec
 **零命中**。命令排除了 `*.md`，所以「文档里写『Key 不能进前端』」这类说明不会污染结果。
 代码侧同样没有 `fetch(` / `XMLHttpRequest` / `EventSource`（见 §二 P1-4），
 即前端没有可携带 Key 的出网调用；真接模型时 `endpoint` 必须指向自己的代理
-（`src/app/llm.js` 文件头第 17-21 行把这条写成了硬约束）。
+（`src/app/llm.js` 文件头的 ⚠️ 段落把这条写成了硬约束）。
 
 ### 0.6 domain 随机性 / 时间
 
@@ -156,11 +156,12 @@ $ rg -n "Date\.now\(\)" src/domain/
 
 | 条目 | 回执 |
 |---|---|
-| 「工作区已经整理干净并落库了」（原文措辞） | **已过时 → 已按实况改写。** 10:00 `git status --porcelain`：16 个已跟踪文件被改 + 30 个未跟踪条目。与基线 `50e18d8` 相比仓库上只多一个文档提交 `9909910`。<br>→ 已改 `docs/HANDOFF-V1.10.md` §5 P0 状态段落（明确「先等并行流程收工再拆」）。 |
-| 「按 A / B 两摊拆成两个 commit」 | **不需要 · 本轮不做。** 理由：①工作区仍是并行多 Agent 的现场，`git status` 每分钟在变，此刻拆会把别人的半成品卷进提交；②有 7 个文件两摊都改过（HANDOFF §5 表格），硬拆会造坏提交；③拆提交是纯美化，不改善功能。<br>交接给主 Agent：并行收工 → 新分支 → `git reset --soft 50e18d8` → 分批 stage → 每次提交前 `npm run check`。**禁止**在 `main` 上硬拆。 |
+| 「工作区已经整理干净并落库了」（原文措辞） | **先过时、又反转 —— 已按实况改写两轮。**<br>10:00 采集：16 个已跟踪文件被改 + 30 个未跟踪条目（并行现场）。<br>**10:15 采集：并行那一摊已被主流程合入**（`0f22fdd` 并行线合入、`3dd78da` 取消跟踪 `cat-rig.result.json`），`git status --porcelain` 只剩 4 个文件。<br>→ 已改 `docs/HANDOFF-V1.10.md` §0 与 §5 P0 两处，写清现在到底有几个提交、还剩什么没提。 |
+| 「按 A / B 两摊拆成两个 commit」 | **不需要 · 本轮不做（合并已发生，再拆就是改写已合入历史）。** 理由：①`0f22fdd` 已把并行线合进去了，此时 `git reset --soft` 拆提交等于重写主历史；②有 7 个文件两摊都改过（HANDOFF §5 表格），硬拆会造坏提交；③拆提交是纯美化。<br>若上游仍要求拆：新分支上做，**不在 `main` 上硬拆**，每次提交前 `npm run check`。 |
 
-> ⚠️ **已提交的东西也要看一眼**：上面那条「删掉 `src/views/w3d/index.js` 的 chat/events import 才能拆」
-> 的说明仍按原样保留，但实际拆不拆的判据只有一条 —— 拆完 `npm run check` 必须全绿。
+> 拆提交的两个硬判据：① 拆完 `npm run check` 必须全绿；② HANDOFF §0 那条「`src/views/w3d/index.js`
+> 直接 import 了 `./chat.js` 与 `./events.js`，没法拆成互不依赖的两个提交」仍然成立 ——
+> **别为了拆干净去改 import**，那是拿架构换提交历史。
 
 ### P1 —— 复核四个功能的正确性（6 条，全部复核）
 
@@ -276,17 +277,19 @@ pageSlice p2: {"items":[6,7],"hasMore":false,"page":2,"total":7}
 
 见 §0.5：**零命中**。
 
-### 6. `git status` 干净 —— ❌ 当前不成立（并行现场）
+### 6. `git status` 干净 —— ✅ 基本达成（并行线已合入）
 
 ```bash
-$ git status --porcelain | awk '{print $1}' | sort | uniq -c
-     30 ??
-     16 M
+$ git status --porcelain      # 10:15:10
+ M README.md
+ M dev/optimize-models.py
+ M docs/DELIVERY-V1.10.md
+ M docs/HANDOFF-V1.10.md
 ```
 
-不成立，且**本轮不允许清**（禁止 commit / stash / clean；另有 4 个 Agent 正在写这些文件）。
-**回执：未达成。** 由主 Agent 在并行收工后执行：`git add -A && git commit`
-（或按 P0 拆两个 commit），提交前必须 `npm run check` 全绿。
+10:00 时是 `16 M + 30 ??`（并行现场，**不成立**）；10:15 主流程把并行那一摊合入后，
+只剩 4 个文件 —— 三个是本次文档审计的产物，一个是并行线的 `dev/optimize-models.py`。
+**回执：达成（本工作流不提交；最后一次提交由主 Agent 做，提交前请补跑 `npm run check`）。**
 
 ---
 
@@ -312,7 +315,7 @@ $ git status --porcelain | awk '{print $1}' | sort | uniq -c
 | L2 | （已由并行工作流 D 修复）自有 GLB 体积曾全部超 6 MB | `assets/models/pets/*.glb` | 2026-11-01 10:11 复测：`node dev/check-assets.js` → **模型库体检通过**（17 个自有 GLB 全部在预算内，`cat.glb` 2.76 MB / 4 万面）。后续新增模型仍要守 `MAX_BYTES` 6 MB、`MAX_TRIS` 60k | 已闭 |
 | L3 | `docs/PLAY-3D-V1.10.md:43` 仍写「AI 状态机 23 态」，实际已在 25 | 该文档 | 与 `src/views/w3d/ai.js` 的 `AI` 对象对齐（本文不改，避免与 D 抢文件） | 主 Agent |
 | L4 | 单测 / 冒烟条数持续漂移 | `dev/test/*.test.js`、`dev/smoke.js` | 看 README 硬数字表的「最终复核」行 | 主 Agent |
-| L5 | 工作区 46 个未提交条目（16 改 + 30 未跟踪） | 全仓 | 并行收工后一次性提交，提交前 `npm run check` | 主 Agent |
+| L5 | （已基本关闭）工作区未提交条目：10:00 是 16 改 + 30 未跟踪，10:15 并行线合入后只剩 4 个 | 全仓 | 主 Agent 提交前补跑 `npm run check` | 主 Agent |
 | L6 | **战斗平衡曲线偏离设计意图**：Lv60 对最终 BOSS「流浪金毛」实测 94% 胜（设计是 100% 负的一道墙），三档面板 `spd` 由 50 漂到 55/65 | `src/domain/battle.js`（并行 Agent 刚改过）、`dev/balance.mjs` | 二选一：① 调回设计意图（恢复墙）；② 接受新曲线，同步改 HANDOFF §3.2 与 PRD 口径。**先跑 `node dev/balance.mjs` 看当前值再动** | 主 Agent |
 
 ### 4.3 模型资产（如实记录，这一条现场改了三次）

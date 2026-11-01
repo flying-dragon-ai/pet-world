@@ -53,7 +53,7 @@ export function chatSend(text) {
   box.scrollTop = box.scrollHeight;
 
   setTimeout(() => {
-    const reply = petReply(q, ctx);
+    const reply = petReply(q, { ...ctx, roll: Math.random() });
     box.insertAdjacentHTML('beforeend', '<div class="msg pet">' + esc(reply) + '</div>');
     box.scrollTop = box.scrollHeight;
     sayInStage(reply.slice(0, 18));

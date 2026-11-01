@@ -45,29 +45,33 @@ npm run build        # 产出 dist/（合并成普通 script），再打开 dist
 > 判断真假一律看「来源命令」重跑的结果，不要以本表为准。
 > 采集环境：Git Bash / Node 24，仓库根目录；采集时间列写明每次采集的时刻。
 >
-> **漂移实证**（本文写作的 9 分钟内实测）：模块 61→63、单测 101→163 项、中文品种别名 94→98、
-> AI 状态 24→25、磁盘 GLB 12→17 个（09:59 → 10:08）。这不是笔误，是四个 Agent 正在同一个工作区里加东西
-> —— 所以此表必须带时间戳，并且一定会有「已经过时」的那一刻。
+> **漂移实证**（本文写作的 13 分钟内实测）：模块 61→63、单测 101→163 项、中文品种别名 94→98、
+> AI 状态 24→25、磁盘 GLB 12→17 个、模型库体检从「失败 14 处」变成「通过」（09:59 → 10:12）。
+> 这不是笔误，是四个 Agent 正在同一个工作区里加东西 —— 所以此表必须带时间戳，并且一定会有
+> 「已经过时」的那一刻。
 
 | 指标 | 当前值 | 来源命令 | 采集时间 |
 |---|---|---|---|
-| 模块数（`src/**/*.js`） | 63 | `node dev/check.js`（首行「模块 N 个」） | 2026-11-01 10:05 |
-| 注册动作 / 引用动作 / 未注册 | 269 / 207 / 0 | `node dev/check.js` | 2026-11-01 10:05 |
-| 具名导出核对 | 通过 | `node dev/check-exports.js` | 2026-11-01 10:05 |
-| 领域单测 | 163 项，0 失败 | `node --test dev/test/*.test.js`（末尾 `ℹ tests/pass/fail`） | 2026-11-01 10:07 |
+| 模块数（`src/**/*.js`） | 63 | `node dev/check.js`（首行「模块 N 个」） | 2026-11-01 10:12 |
+| 注册动作 / 引用动作 / 未注册 | 269 / 207 / 0 | `node dev/check.js` | 2026-11-01 10:12 |
+| 具名导出核对 | 通过 | `node dev/check-exports.js` | 2026-11-01 10:12 |
+| 领域单测 | 163 项，0 失败 | `node --test dev/test/*.test.js`（末尾 `ℹ tests/pass/fail`） | 2026-11-01 10:12 |
 | jsdom 冒烟 | **由主流程 `npm run check` 复核** | `npm run test:smoke`（本次审计不跑，避免与并行流程抢 `dist/`） | — |
 | `bundle.js` 体积 / 模块数 | **由主流程 `npm run check` 复核** | `npm run build`（同上） | — |
-| 犬种 / 猫种 / 中文品种别名 | 276 / 29 / 98 | `node -e` 读 `src/data/pet-sizes.js` 的 `BREED_SIZES` / `CAT_SIZES` / `BREED_ALIAS` | 2026-11-01 10:05 |
-| 打架对手 NPC | 8 | `node -e` 读 `src/data/battle-tables.js` 的 `BATTLE_FOES` | 2026-11-01 10:05 |
-| 战功 / 世界事件 | 8 / 8 | `src/data/world-tables.js` 的 `MEDALS` / `ALL_WORLD_EVENTS` | 2026-11-01 10:05 |
-| AI 场景 | 9 | `src/domain/ai-prompt.js` 的 `AI_SCENES` | 2026-11-01 10:05 |
-| 3D AI 状态机 | 25 态 | `src/views/w3d/ai.js` 的 `AI` 对象键数 | 2026-11-01 10:05 |
+| 犬种 / 猫种 / 中文品种别名 | 276 / 29 / 98 | `node -e` 读 `src/data/pet-sizes.js` 的 `BREED_SIZES` / `CAT_SIZES` / `BREED_ALIAS` | 2026-11-01 10:12 |
+| 打架对手 NPC | 8 | `node -e` 读 `src/data/battle-tables.js` 的 `BATTLE_FOES` | 2026-11-01 10:12 |
+| 战功 / 世界事件 | 8 / 8 | `src/data/world-tables.js` 的 `MEDALS` / `ALL_WORLD_EVENTS` | 2026-11-01 10:12 |
+| AI 场景 | 9 | `src/domain/ai-prompt.js` 的 `AI_SCENES` | 2026-11-01 10:12 |
+| 3D AI 状态机 | 25 态 | `src/views/w3d/ai.js` 的 `AI` 对象键数 | 2026-11-01 10:12 |
 | 宠物模型目录 / 自有 GLB / 程序化 / alias | 22 / 17 / 4 / 1（体检通过） | `node dev/check-assets.js`（该脚本与资产正由并行流程改造） | 2026-11-01 10:11 |
-| vendor 文件字节数（three / GLTFLoader / marked / purify） | 603445 / 96550 / 39903 / 29828 | `stat -c '%n %s' assets/js/vendor/*.js` | 2026-11-01 10:05 |
+| vendor 文件字节数（three / GLTFLoader / marked / purify） | 603445 / 96550 / 39903 / 29828 | `stat -c '%n %s' assets/js/vendor/*.js` | 2026-11-01 10:12 |
 | **最终复核** | | | |
 
 单测按功能拆开（2026-11-01 10:07 采集，`node --test dev/test/<名>.test.js`）：
 体型 26 项 / 打架 23 项 / AI 提示词 18 项 / AI 端口 19 项 / 社区发帖 20 项。
+
+> 「最终复核」那一行留给主 Agent：并行收工后跑 `npm run check`，把 6 个会漂的数字（模块 / 动作 /
+> 单测 / 冒烟 / bundle / 模型）填进去，并标上新的采集时间。
 
 ## 目录
 

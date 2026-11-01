@@ -15,7 +15,7 @@ export function migrateV3(S){
   const zmap={'猫猫':'猫区','狗狗':'狗区','异宠':'异宠区'};
   (S.posts||[]).forEach(po=>{if(zmap[po.zone])po.zone=zmap[po.zone];if(!po.media)po.media='图文';});
   if(!(S.posts||[]).some(p=>p.zone==='鸟区')){
-    S.posts.push({id:'po7',zone:'鸟区',auth:'玄凤小张',authImg:'https://images.unsplash.com/photo-1552728084-7afe55122d02?w=80&h=80&fit=crop',time:Date.now()-4*3600e3,title:'玄凤学会了《小星星》前两个音',txt:'练了整整两个月，终于会吹《小星星》前两个音了，掌声在哪里！',img:'https://images.unsplash.com/photo-1552728084-7afe55122d02?w=600&h=400&fit=crop',likes:156,cmts:[],favs:33,media:'图文'});
+    S.posts.push({id:'po7',zone:'鸟区',auth:'玄凤小张',authImg:'https://images.unsplash.com/photo-1552728084-7afe55122d02?w=80&h=80&fit=crop',time:now()-4*3600e3,title:'玄凤学会了《小星星》前两个音',txt:'练了整整两个月，终于会吹《小星星》前两个音了，掌声在哪里！',img:'https://images.unsplash.com/photo-1552728084-7afe55122d02?w=600&h=400&fit=crop',likes:156,cmts:[],favs:33,media:'图文'});
   }
   const cmap={'主粮':'猫粮','用品':'宠物家居','清洁':'洗护用品'};
   (S.products||[]).forEach(pr=>{if(cmap[pr.cat])pr.cat=cmap[pr.cat]});
@@ -134,7 +134,7 @@ function fillPetSizes(S) {
     }
     if (p.height === undefined || p.height === null || p.height === '') {
       const ref = breedRefOf(p.breed, p.species);
-      p.height = ref ? Math.round(ref.height[0]) : '';
+      p.height = ref && ref.height && ref.height[0] != null ? Math.round(ref.height[0]) : '';
     }
     if (!p.build) p.build = '标准';
     if (!p.pattern) p.pattern = '';

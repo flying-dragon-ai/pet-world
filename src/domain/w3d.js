@@ -126,7 +126,8 @@ export function pickIdle(ctx) {
   const c = ctx || {};
   const attr = c.attr || {};
   const t = c.traits || {};
-  const roll = typeof c.roll === 'number' ? c.roll : Math.random();
+  // roll 一律由调用方（views/w3d/ai.js）注入；缺省 0.5 只是「不塌」的兜底，domain 里不许取随机数
+  const roll = typeof c.roll === 'number' ? c.roll : 0.5;
   if ((attr.stamina || 0) < 20) return 'sleep';
   if (roll < 0.3) return 'walk';
   if (roll < 0.42) return 'wag';
@@ -180,7 +181,8 @@ export function petReply(q, ctx) {
     (t.mischief || 0) >= 60 ? wrap('嘿嘿…我刚把你的袜子藏起来了，猜猜在哪里？') : wrap('我今天在院子里发现了新气味，下次带你一起去嗅！'),
     wrap('虽然听不太懂，但只要是主人说的就是最好的！'),
   ];
-  return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  const roll = typeof c.roll === 'number' ? c.roll : 0.5;
+  return fallbacks[Math.min(fallbacks.length - 1, Math.floor(roll * fallbacks.length))];
 }
 
 /**

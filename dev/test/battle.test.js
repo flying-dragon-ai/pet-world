@@ -236,7 +236,7 @@ test('对手库：8 个原创对手，名字唯一，面板落在合理区间', 
   assert.equal(foeStats(FOE_BY_ID.f2).size, '迷你型', '泰迪（玩具贵宾 1.81–2.72kg）是迷你型');
 });
 
-test('难度阶梯：新手打不过最终 BOSS，毕业能拿下（平衡模拟的回归锚点）', () => {
+test('难度阶梯：最终 BOSS 是一道墙 —— 新手/中期 0%，毕业也只在 10%~45%（平衡模拟的回归锚点）', () => {
   const boss = foeStats(FOE_BY_ID.f8);
   const rate = (w, lv) => {
     const mine = battleStats(JIN, w, lv);
@@ -248,8 +248,10 @@ test('难度阶梯：新手打不过最终 BOSS，毕业能拿下（平衡模拟
   };
   const rookie = rate({ courage: 60, aggression: 30, attr: { stamina: 85 } }, 1);
   const graduate = rate({ courage: 95, aggression: 95, attr: { stamina: 100 } }, 60);
+  const mid = rate({ courage: 70, aggression: 75, attr: { stamina: 90 } }, 20);
   assert.equal(rookie, 0, 'Lv.1 不该打赢最终 BOSS');
-  assert.ok(graduate >= 0.8, '毕业 Lv.60 应能碾压最终 BOSS，实际胜率 ' + graduate);
+  assert.equal(mid, 0, 'Lv.20 也不该打赢最终 BOSS');
+  assert.ok(graduate > 0 && graduate <= 0.45, '毕业 Lv.60 对最终 BOSS 应是一场硬仗（10%~45%），实际胜率 ' + graduate);
 });
 
 test('世界档案默认带冲动值与攻击值', () => {

@@ -14,7 +14,7 @@
 
 ## 0. 背景
 
-项目路径：`D:/temp/宠物世界`（git 仓库，工作区带未提交改动；基线提交 `50e18d8`，其上另有一个文档提交 `9909910`）。
+项目路径：`D:/temp/宠物世界`（git 仓库；基线提交 `50e18d8`，其上已合入 `9909910` / `0f22fdd` / `3dd78da`）。
 这是一个黑客松 Demo：竖屏 App 内嵌横屏 three.js 3D 宠物世界，纯静态托管在 GitHub Pages，
 **零运行时依赖**，只有 devDependency `jsdom`（测试用）。打包器是自研的 `dev/build.js`（零依赖）。
 
@@ -77,8 +77,8 @@ npm run check          # 静态体检 + 领域单测 + 构建 + jsdom 冒烟，�
     该块由 `node dev/gen-pet-sizes.js` 从 <https://raw.githubusercontent.com/tmfilho/akcdata/master/data/akc-data-latest.csv>
     （MIT）自动生成，文件内有 `AUTO-GEN` 标记块，**重新生成时不要手工改块内内容**。
   - `CAT_SIZES`：29 个猫品种（人工维护，同格式数组）。
-  - `BREED_ALIAS`：中文品种名 → AKC 英文名（用于建档时中文输入匹配）。当前采集为 94 条键，
-    条数以 `node -e "...Object.keys(BREED_ALIAS).length"` 读 `src/data/pet-sizes.js` 为准。
+  - `BREED_ALIAS`：中文品种名 → AKC 英文名（用于建档时中文输入匹配）。条数一直在加（本文不写死），
+    以 `node -e "...Object.keys(BREED_ALIAS).length"` 读 `src/data/pet-sizes.js` 为准。
   - `SIZE_SCALE`：犬 迷你<4kg / 小型4-12 / 中型12-25 / 大型25-45 / 巨型≥45；猫 小型<4 / 中型4-6 / 大型≥6。
   - `BCS_LABELS`：体况评分文案。
   - 导出 `breedKeyOf(breed)` 与 `breedRefOf(breed, species)` —— **放在 data 层是因为 data 不得依赖 domain**。
@@ -97,7 +97,7 @@ npm run check          # 静态体检 + 领域单测 + 构建 + jsdom 冒烟，�
      用户手选的只有「体格 build」。
   2. **BCS 是近似估算**：按体重与品种标准中点线性映射（ratio 0.75→3 分，1.00→5 分，1.25→7 分）。
      UI 与注释里已标明「不替代兽医触诊」。
-- **测试**：`dev/test/pet.test.js`（`node --test dev/test/pet.test.js`，当前采集 15 项 / 0 失败）
+- **测试**：`dev/test/pet.test.js`（`node --test dev/test/pet.test.js`，应 0 失败；条数不写死）
 
 ### 3.2 宠物出门打架（家园系统里的「宠物出门打架」）
 
@@ -128,7 +128,7 @@ npm run check          # 静态体检 + 领域单测 + 构建 + jsdom 冒烟，�
   墙已被抹平（面板 `spd` 同时从 50 漂到 65，怀疑是并行改 `src/domain/battle.js` 时带进来的）。
   接手的人先跑一次该命令，再决定是「调回设计意图」还是「接受新曲线并改规格」，
   回执与数字见 `docs/DELIVERY-V1.10.md` 第三节第 2 条。
-- **测试**：`dev/test/battle.test.js`（`node --test dev/test/battle.test.js`，当前采集 14 项 / 0 失败）
+- **测试**：`dev/test/battle.test.js`（`node --test dev/test/battle.test.js`，应 0 失败；条数不写死）
 - **一条已定的取舍**：**不引入物理引擎**（cannon-es 346KB / matter-js 更重）。
   PRD §4.8 的落点是「弹窗文字 + 图片结算」，参考旅行青蛙；3D 只做姿态表现，不做真实物理。
 
@@ -153,7 +153,7 @@ npm run check          # 静态体检 + 领域单测 + 构建 + jsdom 冒烟，�
   AI 消息渲染改 `mdToHtml`；`aiGreet` 改用 `localGreeting`。原有的本地 `SCENES` / `EMG_KW` / `RISK_KW` / `aiReply` 已删除。
 - **一条已定的取舍**：**这一轮不接真 LLM API**。纯静态 GitHub Pages 撑不住服务端代理，
   且 API Key 不能进前端。所以先把 `app/llm.js` 端口化留好接口，本地语料作为默认后端（离线可演示）。
-- **测试**：`dev/test/ai-prompt.test.js`（`node --test dev/test/ai-prompt.test.js`，当前采集 11 项 / 0 失败）
+- **测试**：`dev/test/ai-prompt.test.js` + `dev/test/llm.test.js`（`node --test dev/test/ai-prompt.test.js dev/test/llm.test.js`，应 0 失败；条数不写死）
 
 ### 3.4 社区发帖增强
 
@@ -169,7 +169,7 @@ npm run check          # 静态体检 + 领域单测 + 构建 + jsdom 冒烟，�
 - **UI 状态** `src/app/ui-state.js`：`ui.publish` 增加 `preview`；`ui.community` 增加 `page`。
 - **一条已定的取舍**：**不抄 EasyMDE / CodeMirror**（合计 501 KB，太重），
   用 textarea + Markdown 预览；也**没有引入 `browser-image-compression`**（省 57 KB vendor，逻辑仅约 30 行）。
-- **测试**：`dev/test/post.test.js`（`node --test dev/test/post.test.js`，当前采集 9 项 / 0 失败）
+- **测试**：`dev/test/post.test.js`（`node --test dev/test/post.test.js`，应 0 失败；条数不写死）
 
 ## 4. 已完成到哪一步（**不要重做**）
 
@@ -185,8 +185,9 @@ npm run test:smoke    → 0 失败（条数 / bundle 体积看输出）
 > 带采集时间与来源命令的硬数字快照统一记在 [`README.md` 的「硬数字」表](../README.md#硬数字实测快照)，
 > 交付回执记在 [`docs/DELIVERY-V1.10.md`](DELIVERY-V1.10.md)。
 
-版本号已统一升到 **V1.10.0**：`package.json`（1.10.0）、`src/app/config.js`（`APP_VERSION`）、
-`index.html`（title + 页脚两处）、`src/main.js`（`window.__petWorld.version`）、`README.md`。
+版本号已统一升到 **V1.10.1**（以 `src/app/config.js` 的 `APP_VERSION` 为准）：`package.json`、
+`src/app/config.js`（`APP_VERSION`）、`index.html`（title + 页脚两处）、
+`src/main.js`（`window.__petWorld.version`）、`README.md` —— 五处应一致；改版本号时五个地方一起改。
 `docs/ARCHITECTURE.md` 已更新（目录树 + 「AI 是端口不是实现」+「第三方库怎么进项目」两节 + 测试覆盖表）。
 `docs/research/` 三份调研文档已就位：
 `ADAPTATION-PLAN.md`、`wheels-pet-body-and-battle.md`、`wheels-ai-chat-and-community.md`。
@@ -195,12 +196,18 @@ npm run test:smoke    → 0 失败（条数 / bundle 体积看输出）
 
 ### P0 —— 拆分提交（如果需要拆得漂亮的话）
 
-**状态（2026-11-01 10:00 采集，`git status --porcelain` 实况）：**
+**状态（2026-11-01 10:15 采集，`git status --porcelain` 实况）：**
 
-- 与基线 `50e18d8` 相比，仓库上只多了一个文档提交 `9909910`（`docs: 交接提示词更新到基线提交 50e18d8`）；
-- 但**工作区并不干净**：16 个已跟踪文件被改动 + 30 个未跟踪条目（含 `assets/models/pets/*.glb`、
-  `dev/check-assets.js`、`dev/test/w3d-assets.test.js` 等），来自当时并行的多个 Agent（模型资产 / 测试 / 冒烟）。
-  这些改动尚未提交，接手的人**不要整文件回滚**（会把别人的活一起干掉）。
+- 与基线 `50e18d8` 相比，仓库上多了三个提交：
+  `9909910`（文档）、`0f22fdd`（**并行线合入**：战斗系统 / 本地 LLM 出口 / 社区 Markdown /
+  3D 聊天与事件 / 22 只宠物模型）、`3dd78da`（取消跟踪含预签名 URL 的 `cat-rig.result.json`）。
+- **并行那一摊已经合入了**，所以下面「拆分提交」这件事从「等收工」变成「合并已发生」：
+  现在再拆 `0f22fdd` 属于改写已合入的历史，风险比收益大；**除非上游明确要求，否则不要拆**。
+- 工作区极干净：`git status --porcelain` 只剩 4 个未提交文件（README、两份 docs、
+  以及并行线的 `dev/optimize-models.py`），已不是早期的「16 改 + 30 未跟踪」。
+- 之前那一大堆未跟踪条目（`assets/models/pets/*.glb`、`dev/check-assets.js`、
+  `dev/test/w3d-assets.test.js` …）已经随 `0f22fdd` 入库。
+- 接手的人仍然**不要整文件回滚**（多摊改过同一个文件是常态）。
 - 因此 P0 仍是「可选的美化动作」：要拆提交就按下面的步骤在**新分支**上做，
   并且**先等并行流程收工、`git status` 稳定**再拆。
 - 实时状态以 `git status --short` 为准；本文不冻结文件数。
@@ -253,7 +260,7 @@ npm run test:smoke    → 0 失败（条数 / bundle 体积看输出）
 
 ### P2 —— 收尾交付
 
-- `README.md` 已更新到 V1.10.0，确认数字与 `npm test` / `npm run test:smoke` 实际结果一致。
+- `README.md` 已更新（带采集时间的「硬数字」表），**不再写死会漂的条数**；重跑命令自己比。
 - `docs/ARCHITECTURE.md` 的测试覆盖表与实际条数对一下。
 - 重新构建并部署到 GitHub Pages：<https://flying-dragon-ai.github.io/pet-world/>（仓库根的 `index.html` 是入口；
   `dev/build.js` 产出 `dist/`）。
@@ -295,7 +302,10 @@ node dev/balance.mjs   # 三档成长 × 8 对手胜率曲线（设计意图见�
 - [ ] AI Chat 切换 9 个场景都正常，急症关键词会给出就医提示，且能中断生成
 - [ ] 社区发帖能预览 Markdown、能传图（压缩生效）、列表能「加载更多」
 - [ ] 全仓 grep 无 API Key
-- [ ] `git status` 干净（基线 `50e18d8` 之后的改动已提交，提交前跑过 `npm run check`）
+- [x] `git status` 接近干净 —— 2026-11-01 10:15 实测：并行线已合入（`0f22fdd` / `3dd78da`），
+      工作区只剩本次文档改动与并行线的 `dev/optimize-models.py`；
+      提交前跑过 `node dev/check.js` / `node dev/check-exports.js` / `node --test dev/test/*.test.js`
+      （CHECK ALL GREEN，单测 0 失败）。**`npm run check` 全量那一轮由主 Agent 在发布前补跑。**
 
 ## 8. 调研资料（选型依据，别重复调研）
 

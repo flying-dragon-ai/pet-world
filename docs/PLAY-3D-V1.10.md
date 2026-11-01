@@ -40,7 +40,7 @@
 | 挂机数值流逝 tick() | 3D 内每 5 秒结算一次 | 饥饿 -1/38s、清洁 -1/55s、心情 -1/70s、体力 +1/40s（饿时不涨） | `domain/w3d.js`、`w3d/tick.js` |
 | 天数/季节推进 | 季节索引 = 自然日 ÷ 7 % 4 | 跨天自动换季并重掷天气 | `domain/w3d.js`、`w3d/tick.js` |
 | 天气 ☀️⛅🌧 | 晴 / 阴 / 小雨，冬天是雪 | 季节影响概率；雨天宠物躲屋檐 | `w3d/weather.js` |
-| 动作引擎（idle/wag/nod/lie/sleep/eat/shake/happy/sit） | AI 状态机 23 态 | 台词取自 `IDLE_LINES` | `w3d/ai.js`、`data/w3d-assets.js` |
+| 动作引擎（idle/wag/nod/lie/sleep/eat/shake/happy/sit） | AI 状态机 25 态（含 fight / hurt / lick） | 台词取自 `IDLE_LINES` | `w3d/ai.js`、`data/w3d-assets.js` |
 | 自主行为 idleBehavior() | `pickIdle()` + `startBehavior()` | 分支顺序与阈值逐条镜像 2D 版 | `domain/w3d.js`、`w3d/ai.js` |
 | 性格六维 + 5 套预设 | `derivedTraits()` 派生 + 家园页只读展示 | 捣蛋=冲动值、贪吃=100-饥饿、黏人=抚摸次数×8+心情/4 | `domain/w3d.js` |
 | 喂食 / 洗澡 / 抚摸 / 陪玩 / 躺躺 | 底部 7 个按钮 | 数值见上；陪玩体力门槛 5 | `domain/w3d.js`、`w3d/interactions.js` |

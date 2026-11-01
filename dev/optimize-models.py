@@ -6,7 +6,7 @@
 其余 bufferView 按原索引、原顺序、原字节重新拼接（每个起点 4 字节对齐），accessor 依旧按
 bufferView 索引寻址，所以顶点、蒙皮权重、动画曲线全部原样保留。改的只有：
 
-  * images[i].mimeType = "image/jpeg"（名字保留）
+  * images[i].mimeType = "image/jpeg"（名字保留；按实际编码写，不信旧标签）
   * 对应 bufferView 的 byteOffset / byteLength（以及被挤动的后续视图）
   * buffers[0].byteLength、JSON/ BIN 两个 chunk 的长度与文件头总长
 
@@ -124,7 +124,7 @@ def encode_jpeg(data, max_edge=MAX_EDGE, quality=QUALITY):
 
 
 def plan_images(gltf, bin_data):
-    """挑出要重编码的 image：png 且最长边 > MAX_EDGE。返回 {bufferView 索引: 新 jpeg 字节}。"""
+    """挑出要重编码的 image：不是真 JPEG、或最长边 > MAX_EDGE。返回 {bufferView 索引: 新 jpeg 字节}。"""
     bvs = gltf.get('bufferViews') or []
     todo = {}
     for i, im in enumerate(gltf.get('images') or []):
@@ -134,17 +134,17 @@ def plan_images(gltf, bin_data):
         bv = bvs[bv_idx]
         off = bv.get('byteOffset', 0)
         raw = bin_data[off:off + bv['byteLength']]
-        if im.get('mimeType') == 'image/jpeg':
-            continue                                  # 已经压过，幂等跳过
         try:
             probe = Image.open(io.BytesIO(raw))
             probe.load()
         except Exception as err:  # noqa: BLE001 —— 打不开就原样留着，让人看见
             print(f'    ! images[{i}] 解不开（{err}），跳过这张')
             continue
-        if max(probe.size) <= MAX_EDGE:
-            continue                                  # 尺寸本来就不大，不碰
-        jpeg, src, dst = encode_jpeg(raw)
+        # 幂等口径看实际内容而不是 mimeType：真 JPEG 且尺寸达标才跳过。
+        # （贴图被外部工具写成"PNG 字节 + image/jpeg 标签"时，这里会把标签和数据一起纠正）
+        if probe.format == 'JPEG' and max(probe.size) <= MAX_EDGE:
+            continue
+        jpeg, src, dst = encode_jpeg(raw, MAX_EDGE, QUALITY)
         im['mimeType'] = 'image/jpeg'
         todo[bv_idx] = jpeg
         print(f'    images[{i}] {im.get("name", "")}: {src[0]}x{src[1]} PNG {len(raw)}B '
@@ -285,8 +285,8 @@ def run(dir_path, raw_dir, only, dry_run, quality, max_edge):
         if row:
             rows.append(row)
     if not rows:
-        print('没有需要优化的文件（全部已达标）')
-        return 0
+        print('没有需要优化的文件（全部已达标）' if not failed else f'本轮 {failed} 只没处理成功，重跑一次')
+        return 1 if failed else 0
     print(f'\n{"key".ljust(12)}{"before".rjust(12)}{"after".rjust(12)}  降幅   tris  skins  anims')
     for r in rows:
         drop = (1 - r['after'] / r['before']) * 100

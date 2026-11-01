@@ -128,7 +128,7 @@ function openUserHome(name){
   const img=mine?S.user.avatar:(ups.length?ups[0].authImg:'https://images.unsplash.com/photo-1600275669439-14e40452d20b?w=120&h=120&fit=crop');
   const inter=[];
   S.posts.forEach(po=>{po.cmts.forEach(c=>{if(c.u===un&&!c.del)inter.push({t:po.title,x:c.t2,ts:c.ts});(c.replies||[]).forEach(r=>{if(r.u===un)inter.push({t:po.title,x:r.t2,ts:r.ts})})})});
-  openSheet((mine?'我的主页':esc(un)+' 的主页'),
+  openSheet((mine?'我的主页':un+' 的主页'),
   '<div style="text-align:center;padding:6px 0 14px">'+
   '<div style="width:64px;height:64px;border-radius:50%;margin:0 auto 8px;overflow:hidden"><img src="'+esc(img)+'" style="width:100%;height:100%;object-fit:cover" onerror="app.imgErr(this)"></div>'+
   '<div style="font-weight:800">'+esc(un)+(mine?' <span class="chip" style="font-size:9px">我</span>':'')+'</div>'+

@@ -119,6 +119,19 @@ test('自主行为决策：镜像 2D 小游戏的分支与阈值', () => {
   assert.equal(pickIdle({ attr: sleepy, traits, roll: 0.9 }), 'sleep', '体力过低直接睡');
 });
 
+test('domain 不取随机数：roll 缺省时行为确定，同一输入必同输出', () => {
+  const attr = { hunger: 80, clean: 80, mood: 80, stamina: 80 };
+  const traits = { courage: 50, mischief: 20, lively: 50, explore: 50, clingy: 20, greedy: 20 };
+  const a = pickIdle({ attr, traits });
+  assert.equal(a, pickIdle({ attr, traits }), '缺省 roll 必须走同一常量兜底，不能是 Math.random');
+  assert.equal(typeof a, 'string');
+  const ctx = { name: '旺财', attr, traits };
+  assert.equal(petReply('今天天气不错', ctx), petReply('今天天气不错', ctx), '兜底台词也必须可复现');
+  const r1 = petReply('今天天气不错', { ...ctx, roll: 0 });
+  const r2 = petReply('今天天气不错', { ...ctx, roll: 0.99 });
+  assert.ok(r1 && r2, '注入 roll 后仍能出话术');
+});
+
 test('宠物对话：关键词命中对应话术', () => {
   const ctx = { name: '旺财', attr: { mood: 80, hunger: 30, stamina: 60 }, traits: { lively: 60, courage: 60 }, memorial: false };
   assert.ok(/超想你/.test(petReply('想我了吗', ctx)));
